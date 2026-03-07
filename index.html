@@ -726,12 +726,14 @@ var adminSelectedUser=null;
 var _savedRange=null, _activeEditorId='editor';
 
 // ── Navigation ────────────────────────────────────────────────────────────────
+var _viewIdMap={'review':'review-detail','edit-review':'edit-review','new-review':'new-review','new-news':'new-news'};
 function navTo(path){
   var parts=path.split('/');
   var page=parts[0];
   closeNotifPanel();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  var vEl=document.getElementById(page+'-view');
+  var viewId=(_viewIdMap[page]||page)+'-view';
+  var vEl=document.getElementById(viewId);
   if(vEl){vEl.classList.add('active');window.scrollTo(0,0);}
   else{document.getElementById('home-view').classList.add('active');page='home';}
   if(page==='home')loadHomeReviews();
