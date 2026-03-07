@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LPsun</title>
+<!-- Open Graph / Discord / Twitter embed meta -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lpsunreview.web.app/">
+<meta property="og:title" content="LPsun — Music Reviewed Honestly">
+<meta property="og:description" content="Discover albums, write criticism, and share your taste. LPsun is a community music review platform.">
+<meta property="og:image" content="https://lpsunreview.web.app/og-image.png">
+<meta property="og:site_name" content="LPsun">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LPsun — Music Reviewed Honestly">
+<meta name="twitter:description" content="Discover albums, write criticism, and share your taste. LPsun is a community music review platform.">
+<meta name="twitter:image" content="https://lpsunreview.web.app/og-image.png">
+<meta name="theme-color" content="#EF6C00">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -66,7 +78,6 @@ function syncAuthUI(user){
 _auth.onAuthStateChanged(syncAuthUI);
 window.addEventListener('DOMContentLoaded',function(){
   syncAuthUI(_auth.currentUser);
-  routeHash();
 });
 window.addEventListener('hashchange',routeHash);
 </script>
@@ -152,15 +163,15 @@ header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
 .rotd-artist{font-size:15px;color:var(--md);margin:0 0 10px}
 .rotd-stars{color:var(--p);font-size:20px;letter-spacing:2px;margin-bottom:8px}
 .rotd-stars .empty{color:#e0e0e0}
-.rotd-excerpt{font-size:14px;color:var(--dk);line-height:1.6;margin:0 0 12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical}
+.rotd-excerpt{font-size:14px;color:var(--dk);line-height:1.6;margin:0 0 12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .rotd-chosen{font-size:12px;color:var(--md);font-style:italic}
 /* Home review cards — cover fills full card height */
 .home-reviews-list{background:#fff;box-shadow:var(--s2);border-radius:0 0 2px 2px;overflow:hidden}
 .home-review-card{background:#fff;border-bottom:1px solid var(--dv);overflow:hidden;display:flex;align-items:stretch;transition:background .15s;cursor:pointer;min-height:90px}
 .home-review-card:last-child{border-bottom:none}
 .home-review-card:hover{background:#fafafa}
-.hrc-cover{width:90px;flex-shrink:0;position:relative;overflow:hidden;background:#e0e0e0}
-.hrc-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.hrc-cover{width:90px;min-width:90px;flex-shrink:0;align-self:stretch;position:relative;overflow:hidden;background:#e0e0e0}
+.hrc-cover img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
 .hrc-cover-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb}
 .home-review-info{padding:10px 12px;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
 .home-review-work{font-size:14px;font-weight:700;color:var(--dk);margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -438,7 +449,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <span>Notifications</span>
     <div class="notif-hlinks">
       <span class="notif-hlink" onclick="markAllRead()">Mark all read</span>
-      <span class="notif-hlink" onclick="navTo('notifications');closeNotifPanel()">See all</span>
+      <span class="notif-hlink" onclick="navTo('notifications');closeNotifPanel()">See all →</span>
     </div>
   </div>
   <div id="notif-list"><div class="notif-empty">No notifications yet.</div></div>
@@ -725,9 +736,11 @@ function routeHash(){
   var page=parts[0];
   closeNotifPanel();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  var vEl=document.getElementById(page+'-view');
+  // Map page names to view IDs (handles dashes in IDs)
+  var viewId=page+'-view';
+  var vEl=document.getElementById(viewId);
   if(vEl){vEl.classList.add('active');window.scrollTo(0,0);}
-  else{document.getElementById('home-view').classList.add('active');}
+  else{document.getElementById('home-view').classList.add('active');page='home';}
   if(page==='home')loadHomeReviews();
   else if(page==='profile'&&parts[1])showProfile(decodeURIComponent(parts[1]));
   else if(page==='review'&&parts[1])showReviewDetail(decodeURIComponent(parts[1]));
@@ -736,7 +749,10 @@ function routeHash(){
   else if(page==='release'&&parts[1]&&parts[2])showReleasePage(decodeURIComponent(parts[1]),decodeURIComponent(parts[2]));
   else if(page==='edit-review'&&parts[1])openEditReview(decodeURIComponent(parts[1]));
   else if(page==='news')loadNews();
+  else if(page==='new-news'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('news');}
   else if(page==='notifications')loadAllNotifications();
+  else if(page==='admin'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('home');}
+  else if(page==='new-review'){if(!_currentUser)navTo('login');}
 }
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
@@ -799,8 +815,8 @@ function loadAllNotifications(){
 function markNotifRead(id,reviewId){
   if(id)_db.collection('notifications').doc(id).update({read:true}).catch(()=>{});
   loadNotifications();
-  if(reviewId)navTo('review/'+reviewId);
   closeNotifPanel();
+  if(reviewId)navTo('review/'+reviewId);
 }
 function markAllRead(){
   if(!_currentUser)return;
@@ -811,7 +827,9 @@ function markAllRead(){
   });
 }
 function sendNotification(toUid,type,text,reviewId){
-  if(!_currentUser||!toUid||toUid===_currentUser.uid)return;
+  if(!toUid)return;
+  // Allow warnings from staff even to self for testing; skip self-comment/reply notifs
+  if(type!=='warning'&&_currentUser&&toUid===_currentUser.uid)return;
   _db.collection('notifications').add({toUid,type,text,reviewId:reviewId||null,read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
 }
 
@@ -1074,7 +1092,10 @@ function postReply(commentId,reviewId,reviewAuthorId){
     _db.collection('reviews').doc(reviewId).collection('comments').doc(commentId).collection('replies').add({
       text,authorId:_currentUser.uid,authorName:name,authorPhoto:photo,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(()=>{
+    }).then(newRef=>{
+      // store for profile comments tab
+      _db.collection('userComments').add({uid:_currentUser.uid,reviewId,commentId:newRef.id,text,isReply:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      _db.collection('users').doc(_currentUser.uid).update({commentCount:firebase.firestore.FieldValue.increment(1)}).catch(()=>{});
       if(commentAuthorId)sendNotification(commentAuthorId,'reply',name+' replied to your comment.',reviewId);
       input.value='';
       document.getElementById('reply-box-'+commentId).style.display='none';
@@ -1180,7 +1201,9 @@ function expandReviews(btn,section,ids){
   });
 }
 window.addEventListener('DOMContentLoaded',function(){
-  // load home reviews on initial load if on home
+  // All functions are now defined — safe to route
+  routeHash();
+  // Also reload home reviews when hash is empty or home
   var h=window.location.hash||'#home';
   if(h==='#home'||h==='')loadHomeReviews();
 });
