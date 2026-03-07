@@ -1,1466 +1,801 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LPsun</title>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-firebase.initializeApp({
-  apiKey:"AIzaSyBhClAepq6HKKNNFLHqgtRe7el79REdlh8",
-  authDomain:"lpsunreview.firebaseapp.com",
-  projectId:"lpsunreview",
-  storageBucket:"lpsunreview.appspot.com",
-  messagingSenderId:"427095746178",
-  appId:"1:427095746178:web:b453afd2ee03eadc43769b"
-});
-var _auth=firebase.auth(),_db=firebase.firestore(),_currentUser=null,_userData=null;
-var OWNER_UID='AOYaypQXhNNUN7oS1bF8u8UkDAH3';
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPsun</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-function isStaff(uid){return uid===OWNER_UID||(_userData&&_userData.isStaff);}
-function syncAuthUI(user){
-  _currentUser=user;
-  var lo=document.getElementById('logged-out-actions'),li=document.getElementById('logged-in-actions'),
-      dn=document.getElementById('display-name'),du=document.getElementById('drawer-user-name'),
-      da=document.getElementById('drawer-auth-items'),dli=document.getElementById('drawer-logged-in-only'),
-      bn=document.getElementById('btn-new'),bell=document.getElementById('bell-btn'),
-      adminItem=document.getElementById('drawer-admin-item');
-  if(!lo)return;
-  if(user){
-    lo.style.display='none';li.style.display='flex';da.style.display='none';dli.style.display='block';
-    bn.style.display='inline-block';bell.style.display='flex';
-    _db.collection('users').doc(user.uid).get().then(doc=>{
-      if(doc.exists){
-        _userData=doc.data();
-        var name=_userData.displayName||user.email.split('@')[0];
-        dn.textContent=name;du.textContent='Hi, '+name;
-        if(adminItem)adminItem.style.display=isStaff(user.uid)?'block':'none';
-        loadNotifications();
-      } else {
-        _db.collection('users').doc(user.uid).set({displayName:user.displayName||user.email.split('@')[0],joined:firebase.firestore.FieldValue.serverTimestamp(),photo:'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',bio:'',website:'',reviewCount:0,commentCount:0,badges:[]});
-      }
-    });
-    var av=document.querySelector('.view.active');
-    if(av&&(av.id==='login-view'||av.id==='signup-view'))showView('home');
-  } else {
-    lo.style.display='flex';li.style.display='none';da.style.display='block';dli.style.display='none';
-    bn.style.display='none';bell.style.display='none';du.textContent='Welcome to LPsun';_userData=null;
-    if(adminItem)adminItem.style.display='none';
-  }
-}
-_auth.onAuthStateChanged(syncAuthUI);
-window.addEventListener('DOMContentLoaded',()=>syncAuthUI(_auth.currentUser));
-</script>
-<style>
-:root{--p:#EF6C00;--bg:#F5F5F5;--s2:0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.12),0 1px 5px 0 rgba(0,0,0,.2);--s4:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.3);--dk:rgba(0,0,0,.87);--md:rgba(0,0,0,.54);--dv:rgba(0,0,0,.12)}
-*{box-sizing:border-box}
-body{margin:0;padding:0;font-family:'Roboto',sans-serif;background:var(--bg);display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
-main{flex:1}
-header{background:var(--p);color:#fff;height:64px;display:flex;align-items:center;padding:0 16px;box-shadow:var(--s4);position:sticky;top:0;z-index:100}
-.menu-icon{cursor:pointer;padding:8px;border-radius:50%;transition:background .2s}.menu-icon:hover{background:rgba(255,255,255,.1)}
-header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
-.btn-new{display:none;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:4px;font-size:13px;font-weight:700;margin-left:16px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:background .2s;font-family:'Roboto',sans-serif}
-.btn-new:hover{background:rgba(255,255,255,.3)}
-.header-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-/* Bell */
-.bell-btn{display:none;position:relative;cursor:pointer;width:40px;height:40px;align-items:center;justify-content:center;border-radius:50%;transition:background .2s;border:none;background:transparent;color:#fff}
-.bell-btn:hover{background:rgba(255,255,255,.15)}
-.bell-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;background:#f44336;border-radius:50%;border:2px solid var(--p);display:none}
-.notif-panel{position:absolute;top:64px;right:16px;width:340px;background:#fff;border-radius:2px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:400;display:none;max-height:480px;overflow-y:auto}
-.notif-panel.open{display:block}
-.notif-header{padding:12px 16px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--md);border-bottom:1px solid var(--dv);display:flex;justify-content:space-between;align-items:center}
-.notif-item{padding:12px 16px;border-bottom:1px solid var(--dv);cursor:pointer;transition:background .15s;display:flex;gap:12px;align-items:flex-start}
-.notif-item:hover{background:#f5f5f5}
-.notif-item.unread{background:#fff8f0}
-.notif-icon{width:32px;height:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.notif-icon i{color:#fff;font-size:16px}
-.notif-text{font-size:13px;color:var(--dk);line-height:1.4}
-.notif-time{font-size:11px;color:var(--md);margin-top:3px}
-.notif-empty{padding:32px;text-align:center;color:var(--md);font-size:14px}
-/* Drawer */
-.drawer-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200;display:none}
-.drawer{position:fixed;top:0;left:-280px;width:280px;height:100%;background:#fff;z-index:201;box-shadow:var(--s4);transition:left .3s ease;display:flex;flex-direction:column}
-.drawer.open{left:0}
-.drawer-header{background:var(--p);color:#fff;padding:32px 16px}
-.drawer-header h2{margin:0;font-size:20px;font-weight:500}
-.drawer-items{padding:8px 0;flex:1;overflow-y:auto}
-.drawer-item{padding:16px;display:flex;align-items:center;gap:32px;cursor:pointer;color:var(--dk);font-weight:500;transition:background .2s}
-.drawer-item:hover{background:#f0f0f0}.drawer-item i{color:var(--md)}
-.drawer-divider{height:1px;background:var(--dv);margin:8px 0}
-/* Search bar */
-.search-container{display:flex;align-items:center;background:rgba(255,255,255,0);border-radius:2px;transition:background .3s,width .3s,box-shadow .3s;width:40px;height:40px;overflow:hidden}
-.search-container.active{background:#fff;width:200px;box-shadow:var(--s2)}
-.search-icon{cursor:pointer;padding:8px;min-width:40px;display:flex;justify-content:center;user-select:none;transition:color .3s}
-.search-container.active .search-icon{color:var(--md)}
-.search-input{border:none;background:transparent;color:var(--dk);outline:none;font-family:'Roboto',sans-serif;font-size:16px;width:0;padding:0}
-.search-container.active .search-input{width:140px;padding:0 8px}
-.btn-auth{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:8px 16px;border-radius:2px;cursor:pointer;border:none;transition:background .2s,box-shadow .2s;letter-spacing:.5px}
-.btn-login{background:transparent;color:#fff}.btn-login:hover{background:rgba(255,255,255,.1)}
-.btn-signup{background:#fff;color:var(--p);box-shadow:var(--s2)}.btn-signup:hover{background:#fafafa;box-shadow:var(--s4)}
-.user-info{display:none;align-items:center;font-weight:500;font-size:14px;padding:0 8px;cursor:pointer}
-/* Hero */
-.hero{background:var(--p);color:#fff;padding:48px 24px;text-align:center;box-shadow:var(--s2)}
-.hero h2{font-size:36px;font-weight:300;margin:0;letter-spacing:-.5px}.hero h2 b{font-weight:700}
-.hero h3{font-size:28px;font-weight:300;margin:4px 0 12px}
-.hero p{font-size:15px;opacity:.9;margin:0 auto;max-width:600px}
-/* Auth */
-.auth-card-container{display:flex;justify-content:center;padding:40px 16px}
-.auth-card{background:#fff;width:100%;max-width:400px;padding:32px;box-shadow:var(--s4);border-radius:2px}
-.auth-card h2{margin:0 0 24px;font-weight:500;color:var(--dk)}
-.input-group{margin-bottom:24px}
-.input-group label{display:block;font-size:12px;color:var(--p);margin-bottom:8px;font-weight:500}
-.input-group input,.input-group textarea{width:100%;padding:8px 0;border:none;border-bottom:2px solid var(--dv);font-size:16px;outline:none;transition:border-color .2s;font-family:'Roboto',sans-serif}
-.input-group textarea{resize:none;min-height:60px}
-.input-group input:focus,.input-group textarea:focus{border-bottom-color:var(--p)}
-.btn-submit{width:100%;background:var(--p);color:#fff;padding:12px;border:none;border-radius:2px;font-weight:500;text-transform:uppercase;cursor:pointer;box-shadow:var(--s2);margin-top:8px;font-family:'Roboto',sans-serif;font-size:14px;letter-spacing:.5px}
-.btn-submit:hover{box-shadow:var(--s4);filter:brightness(1.1)}
-.auth-switch{text-align:center;margin-top:24px;font-size:14px;color:var(--md)}
-.auth-switch span{color:var(--p);cursor:pointer;font-weight:500}
-.err{color:#d32f2f;font-size:12px;margin-top:8px;display:none}
-/* Home grid */
-.content-grid{padding:24px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:24px}
-.sc{margin-bottom:24px}.fw{grid-column:1/-1}
-.obar{background:var(--p);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--s2);margin-bottom:16px}
-.obar h4{margin:0;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.ebox{border:1px dashed #ccc;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#999;font-style:italic;font-size:14px;background:#fff}
-.hlg{min-height:300px}.hmd{min-height:400px}.hsm{min-height:400px}
-/* Review of the day */
-.rotd-card{background:#fff;box-shadow:var(--s4);border-radius:2px;overflow:hidden;cursor:pointer;transition:box-shadow .2s}
-.rotd-card:hover{box-shadow:0 8px 20px rgba(0,0,0,.2)}
-.rotd-inner{display:flex;align-items:stretch;gap:0}
-.rotd-cover{width:200px;height:200px;object-fit:cover;flex-shrink:0}
-.rotd-cover-ph{width:200px;height:200px;background:#e0e0e0;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.rotd-cover-ph i{font-size:60px}
-.rotd-info{padding:24px;flex:1;display:flex;flex-direction:column;justify-content:center}
-.rotd-work{font-size:22px;font-weight:700;color:var(--dk);margin:0 0 4px}
-.rotd-artist{font-size:15px;color:var(--md);margin:0 0 10px}
-.rotd-stars{color:var(--p);font-size:20px;letter-spacing:2px;margin-bottom:8px}
-.rotd-stars .empty{color:#e0e0e0}
-.rotd-excerpt{font-size:14px;color:var(--dk);line-height:1.6;margin:0 0 12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-.rotd-chosen{font-size:12px;color:var(--md);font-style:italic}
-/* Home review cards */
-.home-reviews-list{display:flex;flex-direction:column;gap:0}
-.home-review-card{background:#fff;border-bottom:1px solid var(--dv);overflow:hidden;display:flex;gap:0;transition:background .15s;cursor:pointer;align-items:stretch}
-.home-review-card:hover{background:#fafafa}
-.home-review-card:first-child{border-radius:2px 2px 0 0}
-.home-review-cover{width:72px;height:72px;flex-shrink:0;object-fit:cover;display:block;align-self:stretch}
-.home-review-cover-ph{width:72px;height:72px;flex-shrink:0;background:#e0e0e0;display:flex;align-items:center;justify-content:center;color:#bbb;align-self:stretch}
-.home-review-info{padding:10px 12px;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
-.home-review-work{font-size:14px;font-weight:700;color:var(--dk);margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-review-artist{font-size:12px;color:var(--md);margin:0 0 4px}
-.home-review-stars{color:var(--p);font-size:13px;letter-spacing:1px}
-.home-review-stars .empty{color:#e0e0e0}
-.home-review-by{font-size:11px;color:var(--md);margin-top:3px;display:flex;align-items:center;gap:3px}
-.show-more-bar{background:#fff;border-top:1px solid var(--dv);padding:10px 16px;text-align:center;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--p);transition:background .15s;border-radius:0 0 2px 2px}
-.show-more-bar:hover{background:#fdf3e8}
-/* Review page */
-.rv-wrap{max-width:800px;margin:0 auto;padding:24px 24px 64px}
-.rv-hero{background:#fff;box-shadow:var(--s2);border-radius:2px;overflow:hidden;margin-bottom:20px}
-.rv-top{display:flex;gap:0;align-items:stretch}
-.rv-cover{width:180px;height:180px;object-fit:cover;flex-shrink:0}
-.rv-cover-ph{width:180px;height:180px;background:#e0e0e0;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.rv-cover-ph i{font-size:60px}
-.rv-meta{padding:20px 24px;flex:1;display:flex;flex-direction:column;justify-content:center}
-.rv-work{font-size:22px;font-weight:700;color:var(--dk);margin:0 0 4px}
-.rv-artist{font-size:15px;color:var(--md);margin:0 0 10px;cursor:pointer}
-.rv-artist:hover{color:var(--p)}
-.rv-stars{color:var(--p);font-size:20px;letter-spacing:2px;margin-bottom:8px}
-.rv-stars .empty{color:#e0e0e0}
-.rv-byline{font-size:13px;color:var(--md);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.rv-byline .rv-author{font-weight:700;color:var(--dk);cursor:pointer}.rv-byline .rv-author:hover{color:var(--p)}
-.rv-date{font-size:12px;color:var(--md);margin-top:4px}
-.rv-staff-actions{padding:10px 20px;background:#fff8f0;border-top:1px solid rgba(239,108,0,.2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.rv-body{padding:24px;border-top:1px solid var(--dv);font-size:16px;line-height:1.8;color:var(--dk)}
-/* Like/dislike */
-.rv-reactions{display:flex;align-items:center;gap:8px;padding:12px 24px;border-top:1px solid var(--dv);background:#fafafa}
-.react-btn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;border:1px solid var(--dv);background:#fff;cursor:pointer;font-size:13px;font-weight:500;color:var(--md);transition:all .15s;font-family:'Roboto',sans-serif}
-.react-btn:hover{background:#f5f5f5;border-color:#ccc}
-.react-btn.active-like{border-color:var(--p);color:var(--p);background:#fff8f0}
-.react-btn.active-dislike{border-color:#5c6bc0;color:#5c6bc0;background:#f3f4fc}
-.react-btn i{font-size:17px}
-/* Comments */
-.comments-section{background:#fff;border-radius:2px;box-shadow:var(--s2);padding:20px 24px;margin-top:20px}
-.comments-header{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);margin:0 0 16px}
-.comment-box{display:flex;gap:12px;margin-bottom:20px;align-items:flex-start}
-.comment-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e0e0e0;flex-shrink:0}
-.comment-input-wrap{flex:1}
-.comment-input{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:14px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;resize:none;background:transparent;color:var(--dk)}
-.comment-input:focus{border-bottom-color:var(--p)}
-.comment-input-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;display:none}
-.comment-btn{font-family:'Roboto',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:6px 14px;border-radius:2px;cursor:pointer;border:none;transition:background .15s}
-.comment-cancel{background:transparent;color:var(--md)}.comment-cancel:hover{background:var(--bg)}
-.comment-submit{background:var(--p);color:#fff;box-shadow:var(--s2)}.comment-submit:hover{filter:brightness(1.08)}
-.comment-item{display:flex;gap:10px;margin-bottom:16px;align-items:flex-start}
-.comment-body{flex:1;min-width:0}
-.comment-name-row{display:flex;align-items:center;gap:6px;margin-bottom:2px}
-.comment-name{font-size:13px;font-weight:700;color:var(--dk);cursor:pointer}.comment-name:hover{color:var(--p)}
-.comment-time{font-size:11px;color:var(--md)}
-.comment-text{font-size:14px;color:var(--dk);line-height:1.5;word-break:break-word}
-.comment-text.editing textarea{width:100%;border:none;border-bottom:2px solid var(--p);font-size:14px;font-family:'Roboto',sans-serif;outline:none;resize:none;background:transparent;padding:4px 0;color:var(--dk)}
-.comment-actions{display:flex;gap:12px;margin-top:4px;align-items:center}
-.comment-action{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--md);cursor:pointer;transition:color .15s;background:none;border:none;padding:0;font-family:'Roboto',sans-serif}
-.comment-action:hover{color:var(--p)}
-.comment-action.del:hover{color:#d32f2f}
-.comment-like-row{display:flex;gap:10px;align-items:center;margin-top:4px}
-.comment-like-btn{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--md);cursor:pointer;background:none;border:none;font-family:'Roboto',sans-serif;padding:0;transition:color .15s}
-.comment-like-btn:hover{color:var(--p)}.comment-like-btn.active{color:var(--p)}
-.replies-wrap{margin-top:10px;margin-left:0;padding-left:16px;border-left:2px solid var(--dv)}
-.reply-item{display:flex;gap:8px;margin-bottom:12px;align-items:flex-start}
-.reply-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#e0e0e0;flex-shrink:0}
-.reply-box-wrap{margin-top:8px;display:none}
-/* Review form */
-.rph{background:var(--p);color:#fff;padding:40px 24px 32px}
-.rph h2{margin:0;font-size:28px;font-weight:300;letter-spacing:-.5px;max-width:860px;margin:0 auto}
-.rph h2 b{font-weight:700}
-.rph p{margin:8px auto 0;opacity:.85;font-size:14px;max-width:860px}
-.rwrap{max-width:860px;margin:0 auto;padding:32px 24px 64px}
-.rcard{background:#fff;box-shadow:var(--s4);border-radius:2px;overflow:hidden}
-.rsec{padding:28px 32px;border-bottom:1px solid var(--dv)}.rsec:last-child{border-bottom:none}
-.slbl{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);margin:0 0 20px}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-.fld label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--md);margin-bottom:10px}
-.fld input,.fld select{width:100%;padding:10px 0;border:none;border-bottom:2px solid var(--dv);font-size:16px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;background:transparent;color:var(--dk)}
-.fld input:focus,.fld select:focus{border-bottom-color:var(--p)}
-.sw{display:flex;align-items:center;gap:16px}
-.stars{display:flex;gap:4px;flex-direction:row-reverse;justify-content:flex-end}
-.stars input{display:none}
-.stars label{font-size:32px;color:#ccc;cursor:pointer;transition:color .15s,transform .15s;margin:0;line-height:1}
-.stars input:checked~label,.stars label:hover,.stars label:hover~label{color:var(--p)}
-.stars label:hover{transform:scale(1.2)}
-.slb{font-size:13px;color:var(--md);font-style:italic}
-.covs{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
-.covp{width:140px;height:140px;border:2px dashed var(--dv);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fafafa;overflow:hidden;position:relative}
-.covp img{width:100%;height:100%;object-fit:cover;display:none}
-.covph{display:flex;flex-direction:column;align-items:center;gap:8px;color:#ccc}
-.covph i{font-size:40px}.covph span{font-size:11px}
-.covin{flex:1;min-width:200px}
-.cor{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--md);font-size:12px}
-.cor::before,.cor::after{content:'';flex:1;height:1px;background:var(--dv)}
-.bup{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);border:1px solid var(--dv);padding:10px 16px;border-radius:2px;cursor:pointer;font-size:13px;font-family:'Roboto',sans-serif;font-weight:500;color:var(--dk);transition:background .2s,box-shadow .2s;width:100%}
-.bup:hover{background:#ebebeb;box-shadow:var(--s2)}.bup i{font-size:18px;color:var(--md)}
-#cfile,#profile-file-input,#editor-file-input{display:none}
-.ubadge{font-size:11px;color:var(--md);font-style:italic;margin-top:6px;display:none}
-.tbar{display:flex;align-items:center;gap:2px;padding:8px 12px;background:#fafafa;border:1px solid var(--dv);border-bottom:none;border-radius:2px 2px 0 0;flex-wrap:wrap}
-.tb{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;border-radius:2px;cursor:pointer;color:var(--md);font-size:14px;font-family:'Roboto',sans-serif;font-weight:500;transition:background .15s,color .15s}
-.tb:hover{background:var(--dv);color:var(--dk)}.tb i{font-size:18px}
-.tbs{width:1px;height:24px;background:var(--dv);margin:0 4px}
-.editor{min-height:280px;border:1px solid var(--dv);border-radius:0 0 2px 2px;padding:16px;outline:none;font-size:16px;line-height:1.6;color:var(--dk);font-family:'Roboto',sans-serif;overflow-y:auto;background:#fff}
-.editor:focus{border-color:var(--p)}
-.editor:empty::before{content:attr(data-ph);color:#bbb;pointer-events:none}
-.dlo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center}
-.dlo.open{display:flex}
-.dlg{background:#fff;border-radius:2px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:24px;width:100%;max-width:420px;margin:16px}
-.dlg h3{margin:0 0 16px;font-size:16px;font-weight:500;color:var(--dk)}
-.dinp{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;margin-bottom:16px}
-.dinp:focus{border-bottom-color:var(--p)}
-.dact{display:flex;justify-content:flex-end;gap:8px}
-.dbtn{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:8px 16px;border-radius:2px;cursor:pointer;border:none;letter-spacing:.5px;transition:background .2s}
-.dcan{background:transparent;color:var(--md)}.dcan:hover{background:var(--bg)}
-.dok{background:var(--p);color:#fff}.dok:hover{filter:brightness(1.1)}
-.subbar{padding:24px 32px;display:flex;justify-content:flex-end;gap:12px;border-top:1px solid var(--dv);background:#fafafa}
-.bdis{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:10px 20px;border-radius:2px;cursor:pointer;border:1px solid var(--dv);background:transparent;color:var(--md);letter-spacing:.5px;transition:background .2s}
-.bdis:hover{background:var(--bg)}
-.bpub{font-family:'Roboto',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;padding:10px 28px;border-radius:2px;cursor:pointer;border:none;background:var(--p);color:#fff;letter-spacing:.5px;box-shadow:var(--s2);transition:box-shadow .2s,filter .2s;display:flex;align-items:center;gap:8px}
-.bpub:hover{box-shadow:var(--s4);filter:brightness(1.08)}.bpub i{font-size:18px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:2px;font-size:14px;box-shadow:var(--s4);transition:transform .3s;z-index:1000;white-space:nowrap}
-.toast.show{transform:translateX(-50%) translateY(0)}
-/* Search */
-.tabs{display:flex;background:#fff;border-bottom:1px solid var(--dv);position:sticky;top:64px;z-index:90}
-.tab{flex:1;text-align:center;padding:16px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--md);cursor:pointer;transition:color .2s}
-.tab.active{color:var(--p);border-bottom:2px solid var(--p)}
-.search-empty{text-align:center;padding:80px 24px;color:var(--md)}
-.search-empty b{color:var(--dk)}
-.search-result-item{background:#fff;padding:14px 20px;border-bottom:1px solid var(--dv);cursor:pointer;display:flex;align-items:center;gap:14px;transition:background .15s}
-.search-result-item:hover{background:#f5f5f5}.search-result-item:last-child{border-bottom:none}
-.search-result-cover{width:48px;height:48px;object-fit:cover;border-radius:2px;background:#e0e0e0;flex-shrink:0}
-.search-result-cover-ph{width:48px;height:48px;border-radius:2px;background:#e0e0e0;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.search-result-cover-ph i{font-size:22px}
-.search-result-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#e0e0e0;flex-shrink:0}
-.search-result-main{flex:1;min-width:0}
-.search-result-title{font-size:15px;font-weight:700;color:var(--dk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.search-result-sub{font-size:13px;color:var(--md);margin-top:2px}
-.search-results-box{background:#fff;box-shadow:var(--s2);border-radius:2px;margin:16px 24px;overflow:hidden}
-.search-section-label{padding:10px 20px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);border-bottom:1px solid var(--dv);background:#fff}
-/* Artist / Release pages */
-.artist-hero{padding:40px 32px 32px;background:#fff;border-bottom:1px solid var(--dv)}
-.artist-hero h1{font-size:36px;font-weight:700;margin:0 0 4px;color:var(--dk)}
-.artist-hero p{font-size:14px;color:var(--md);margin:0}
-.artist-releases{padding:24px 32px}
-.artist-releases h3{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);margin:0 0 16px}
-.release-row{background:#fff;border-radius:2px;box-shadow:var(--s2);display:flex;align-items:stretch;overflow:hidden;cursor:pointer;transition:box-shadow .2s;margin-bottom:12px}
-.release-row:hover{box-shadow:var(--s4)}
-.release-row-cover{width:72px;height:72px;object-fit:cover;flex-shrink:0}
-.release-row-cover-ph{width:72px;height:72px;background:#e0e0e0;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.release-row-info{padding:12px 16px;flex:1;display:flex;flex-direction:column;justify-content:center}
-.release-row-title{font-size:15px;font-weight:700;color:var(--dk);margin:0 0 2px}
-.release-row-meta{font-size:12px;color:var(--md)}
-.release-row-count{font-size:12px;color:var(--p);font-weight:500;margin-left:auto;padding:12px 16px;align-self:center;white-space:nowrap}
-.release-hero{display:flex;gap:24px;padding:32px;background:#fff;border-bottom:1px solid var(--dv);align-items:flex-start}
-.release-hero-cover{width:120px;height:120px;object-fit:cover;border-radius:4px;flex-shrink:0}
-.release-hero-cover-ph{width:120px;height:120px;border-radius:4px;flex-shrink:0;background:#e0e0e0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.release-hero-cover-ph i{font-size:48px}
-.release-hero-info{flex:1}
-.release-hero-info h1{font-size:28px;font-weight:700;margin:0 0 4px;color:var(--dk)}
-.release-hero-info h2{font-size:16px;font-weight:400;color:var(--md);margin:0 0 10px}
-.release-reviews-list{padding:24px 32px}
-.release-reviews-list h3{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);margin:0 0 16px}
-.release-review-item{background:#fff;box-shadow:var(--s2);border-radius:2px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:box-shadow .2s}
-.release-review-item:hover{box-shadow:var(--s4)}
-.release-review-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--dv)}
-.release-review-stars{color:var(--p);font-size:13px;margin-left:auto}
-.release-review-stars .empty{color:#e0e0e0}
-/* Profile */
-.review-card{background:#fff;border-radius:2px;box-shadow:var(--s2);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s;cursor:pointer}
-.review-card:hover{box-shadow:var(--s4)}
-.review-card-inner{display:flex;gap:0;align-items:stretch}
-.review-cover{width:80px;height:80px;flex-shrink:0;object-fit:cover;display:block}
-.review-cover-placeholder{width:80px;height:80px;flex-shrink:0;background:#e0e0e0;display:flex;align-items:center;justify-content:center;color:#bbb}
-.review-cover-placeholder i{font-size:32px}
-.review-info{padding:10px 12px;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
-.review-work{font-size:14px;font-weight:700;color:var(--dk);margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.review-artist{font-size:12px;color:var(--md);margin:0 0 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.review-stars{color:var(--p);font-size:13px;letter-spacing:1px;margin:0 0 3px}
-.review-stars .empty{color:#e0e0e0}
-.review-byline{font-size:11px;color:var(--md);display:flex;align-items:center;gap:3px;flex-wrap:wrap}
-.review-actions{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--dv);background:#fafafa}
-.review-action-btn{font-family:'Roboto',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:2px;cursor:pointer;border:none;display:flex;align-items:center;gap:4px;transition:background .2s}
-.review-action-btn i{font-size:15px}
-.btn-edit-review{background:transparent;color:var(--p);border:1px solid var(--p)!important;border-radius:2px}.btn-edit-review:hover{background:rgba(239,108,0,.08)}
-.btn-del-review{background:transparent;color:#d32f2f;border:1px solid #d32f2f!important;border-radius:2px}.btn-del-review:hover{background:rgba(211,47,47,.08)}
-.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:20px}
-.profile-layout{display:flex;align-items:flex-start;gap:0;min-height:calc(100vh - 64px);background:var(--bg)}
-.profile-sidebar{width:296px;flex-shrink:0;padding:32px 24px;background:var(--bg);position:sticky;top:64px;min-height:calc(100vh - 64px)}
-.profile-pic-container{width:100%;aspect-ratio:1;border-radius:4px;overflow:hidden;position:relative;cursor:pointer;margin-bottom:16px;background:#e0e0e0}
-.profile-pic-container img{width:100%;height:100%;object-fit:cover;display:block}
-.profile-pic-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);display:flex;align-items:center;justify-content:center;transition:background .2s;color:transparent}
-.profile-pic-container:hover .profile-pic-overlay{background:rgba(0,0,0,.5);color:#fff}
-.profile-name{font-size:22px;font-weight:700;color:var(--dk);margin:0 0 10px;line-height:1.3}
-.profile-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.profile-name-row .profile-name{margin:0}
-.verified-icon{color:var(--p);font-size:22px;vertical-align:middle}
-.owner-badge{display:inline-block;background:var(--p);color:#fff;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;margin-top:4px}
-.custom-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:3px;text-transform:uppercase;margin:2px 2px 2px 0}
-.banned-badge{display:inline-block;background:#d32f2f;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase}
-.profile-bio{font-size:14px;line-height:1.5;color:var(--dk);margin:10px 0 14px}
-.profile-edit-btn{width:100%;margin-bottom:16px;border:none;background:var(--p);color:#fff;padding:10px 16px;border-radius:4px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;font-family:'Roboto',sans-serif;transition:filter .2s;box-shadow:var(--s2)}
-.profile-edit-btn:hover{filter:brightness(1.1)}
-.profile-meta{font-size:13px;color:var(--md);margin:5px 0;display:flex;align-items:center;gap:6px}
-.profile-meta i{font-size:16px}
-.profile-web{color:var(--p);text-decoration:none;font-weight:400;display:flex;align-items:center;gap:6px;font-size:13px;margin:5px 0;word-break:break-all}
-.profile-web:hover{text-decoration:underline}.profile-web i{font-size:16px;color:var(--p)}
-.profile-stats{display:flex;gap:16px;margin-top:16px;padding-top:16px;border-top:1px solid var(--dv)}
-.stat-item{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--md)}
-.stat-val{font-weight:700;color:var(--dk)}
-.profile-main{flex:1;min-width:0;background:var(--bg);border-left:1px solid var(--dv)}
-.profile-tabs{display:flex;background:#fff;border-bottom:1px solid var(--dv);position:sticky;top:64px;z-index:90}
-.profile-tab{padding:16px 24px;font-size:14px;font-weight:500;color:var(--md);cursor:pointer;transition:color .2s;display:flex;align-items:center;gap:8px;border-bottom:2px solid transparent}
-.profile-tab.active{color:var(--dk);border-bottom-color:var(--p)}
-.profile-tab-badge{background:#e0e0e0;color:var(--dk);border-radius:20px;padding:1px 8px;font-size:12px;font-weight:500}
-.profile-tab i{font-size:18px}
-#profile-content{padding:24px}
-/* Admin panel */
-.admin-wrap{max-width:800px;margin:0 auto;padding:24px}
-.admin-card{background:#fff;box-shadow:var(--s2);border-radius:2px;margin-bottom:20px;overflow:hidden}
-.admin-card-header{background:var(--p);color:#fff;padding:12px 20px;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.admin-card-body{padding:20px}
-.admin-user-result{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--dv);cursor:pointer;transition:background .15s}
-.admin-user-result:hover{background:#f5f5f5}
-.admin-user-result:last-child{border-bottom:none}
-.admin-user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#e0e0e0;flex-shrink:0}
-.admin-action-btn{font-family:'Roboto',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:6px 14px;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
-.aab-verify{border:1px solid var(--p);color:var(--p);background:transparent}.aab-verify:hover{background:rgba(239,108,0,.08)}
-.aab-badge{border:1px solid #7b1fa2;color:#7b1fa2;background:transparent}.aab-badge:hover{background:rgba(123,31,162,.08)}
-.aab-warn{border:1px solid #f57c00;color:#f57c00;background:transparent}.aab-warn:hover{background:rgba(245,124,0,.08)}
-.aab-ban{border:1px solid #d32f2f;color:#d32f2f;background:transparent}.aab-ban:hover{background:rgba(211,47,47,.08)}
-.admin-search-input{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;background:transparent;color:var(--dk)}
-.admin-search-input:focus{border-bottom-color:var(--p)}
-/* Staff action buttons on review */
-.staff-btn{font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border:none;transition:all .15s}
-.sb-rotd{background:#fff3e0;color:var(--p)}.sb-rotd:hover{background:#ffe0b2}
-.sb-edit{background:#e8f5e9;color:#2e7d32}.sb-edit:hover{background:#c8e6c9}
-.sb-del{background:#ffebee;color:#c62828}.sb-del:hover{background:#ffcdd2}
-@media(max-width:768px){
-  .profile-layout{flex-direction:column}
-  .profile-sidebar{width:100%;position:static;min-height:unset;border-right:none;border-bottom:1px solid var(--dv)}
-  .profile-pic-container{width:80px;aspect-ratio:1;float:left;margin-right:14px;margin-bottom:4px}
-  .profile-tabs{top:56px}
-  .rv-cover,.rotd-cover{width:120px;height:120px}.rv-cover-ph,.rotd-cover-ph{width:120px;height:120px}
-}
-@media(max-width:600px){header{height:56px}.hero{padding:32px 16px}.hero h2{font-size:28px}.search-container.active{width:140px}.btn-auth{padding:6px 10px;font-size:12px}header h1{font-size:18px;margin-left:8px}.btn-new{margin-left:8px;padding:3px 8px;font-size:11px}.content-grid{grid-template-columns:1fr;padding:16px}.fr{grid-template-columns:1fr}.rwrap{padding:16px 12px 48px}.rsec{padding:20px 16px}.subbar{padding:16px}.covs{flex-direction:column}.tabs{top:56px}}
-footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margin-top:auto;border-top:1px solid var(--dv)}
-.ft{color:var(--p);font-size:20px;font-weight:700;margin-bottom:8px}
-.fc{font-size:14px;letter-spacing:.5px}
-.view{display:none}.view.active{display:block}
-</style>
+    <!-- Discord Meta Tags -->
+    <meta property="og:title" content="LPsun" />
+    <meta property="og:site_name" content="LPsun" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://lpsunreview.web.app/" />
+    <meta property="og:description" content="Discover albums, write criticism, share your taste. Music that matters. Reviewed honestly." />
+    <meta property="og:image" content="https://lpsunreview.web.app/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="LPsun" />
+    <meta name="twitter:description" content="Discover albums, write criticism, share your taste. Music that matters. Reviewed honestly." />
+    <meta name="twitter:image" content="https://lpsunreview.web.app/og-image.png" />
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            apiKey:            "AIzaSyBhClAepq6HKKNNFLHqgtRe7el79REdlh8",
+            authDomain:        "lpsunreview.firebaseapp.com",
+            projectId:         "lpsunreview",
+            storageBucket:     "lpsunreview.appspot.com",
+            messagingSenderId: "427095746178",
+            appId:             "1:427095746178:web:b453afd2ee03eadc43769b"
+        });
+        var _auth = firebase.auth();
+        var _db   = firebase.firestore();
+        var _currentUser = null;
+        var _userData = null;
+
+        function syncAuthUI(user) {
+            _currentUser = user;
+            var lo  = document.getElementById('logged-out-actions');
+            var li  = document.getElementById('logged-in-actions');
+            var dn  = document.getElementById('display-name');
+            var du  = document.getElementById('drawer-user-name');
+            var da  = document.getElementById('drawer-auth-items');
+            var dli = document.getElementById('drawer-logged-in-only');
+            var bn  = document.getElementById('btn-new');
+
+            if (!lo) return;
+
+            if (user) {
+                lo.style.display='none'; li.style.display='flex';
+                da.style.display='none'; dli.style.display='block';
+                bn.style.display='inline-block';
+                
+                _db.collection('users').doc(user.uid).get().then(doc => {
+                    if(doc.exists) {
+                        _userData = doc.data();
+                        var name = _userData.displayName || user.email.split('@')[0];
+                        dn.textContent = name; du.textContent = 'Hi, ' + name;
+                    } else {
+                        // Initialize user doc if missing
+                        _db.collection('users').doc(user.uid).set({
+                            displayName: user.displayName || user.email.split('@')[0],
+                            joined: firebase.firestore.FieldValue.serverTimestamp(),
+                            photo: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
+                            bio: '',
+                            website: '',
+                            reviewCount: 0,
+                            commentCount: 0
+                        });
+                    }
+                });
+
+                var av = document.querySelector('.view.active');
+                if (av && (av.id==='login-view'||av.id==='signup-view')) showView('home');
+            } else {
+                lo.style.display='flex'; li.style.display='none';
+                da.style.display='block'; dli.style.display='none';
+                bn.style.display='none'; du.textContent='Welcome to LPsun';
+                _userData = null;
+            }
+        }
+
+        _auth.onAuthStateChanged(syncAuthUI);
+        window.addEventListener('DOMContentLoaded', () => syncAuthUI(_auth.currentUser));
+    </script>
+
+    <style>
+        :root{--p:#EF6C00;--bg:#F5F5F5;--s2:0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.12),0 1px 5px 0 rgba(0,0,0,.2);--s4:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.3);--dk:rgba(0,0,0,.87);--md:rgba(0,0,0,.54);--dv:rgba(0,0,0,.12)}
+        *{box-sizing:border-box}
+        body{margin:0;padding:0;font-family:'Roboto',sans-serif;background:var(--bg);display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+        main{flex:1}
+        header{background:var(--p);color:#fff;height:64px;display:flex;align-items:center;padding:0 16px;box-shadow:var(--s4);position:sticky;top:0;z-index:100}
+        .menu-icon{cursor:pointer;padding:8px;border-radius:50%;transition:background .2s}
+        .menu-icon:hover{background:rgba(255,255,255,.1)}
+        header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
+        .btn-new{display:none;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:4px;font-size:13px;font-weight:700;margin-left:16px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:background .2s;font-family:'Roboto',sans-serif}
+        .btn-new:hover{background:rgba(255,255,255,.3)}
+        .header-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+        .drawer-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200;display:none}
+        .drawer{position:fixed;top:0;left:-280px;width:280px;height:100%;background:#fff;z-index:201;box-shadow:var(--s4);transition:left .3s ease;display:flex;flex-direction:column}
+        .drawer.open{left:0}
+        .drawer-header{background:var(--p);color:#fff;padding:32px 16px}
+        .drawer-header h2{margin:0;font-size:20px;font-weight:500}
+        .drawer-items{padding:8px 0;flex:1}
+        .drawer-item{padding:16px;display:flex;align-items:center;gap:32px;cursor:pointer;color:var(--dk);font-weight:500;transition:background .2s}
+        .drawer-item:hover{background:#f0f0f0}
+        .drawer-item i{color:var(--md)}
+        .drawer-divider{height:1px;background:var(--dv);margin:8px 0}
+        .search-container{display:flex;align-items:center;background:rgba(255,255,255,0);border-radius:2px;transition:background .3s,width .3s,box-shadow .3s;width:40px;height:40px;overflow:hidden}
+        .search-container.active{background:#fff;width:200px;box-shadow:var(--s2)}
+        .search-icon{cursor:pointer;padding:8px;min-width:40px;display:flex;justify-content:center;user-select:none;transition:color .3s}
+        .search-container.active .search-icon{color:var(--md)}
+        .search-input{border:none;background:transparent;color:var(--dk);outline:none;font-family:'Roboto',sans-serif;font-size:16px;width:0;padding:0}
+        .search-container.active .search-input{width:140px;padding:0 8px}
+        .btn-auth{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:8px 16px;border-radius:2px;cursor:pointer;border:none;transition:background .2s,box-shadow .2s;letter-spacing:.5px}
+        .btn-login{background:transparent;color:#fff}.btn-login:hover{background:rgba(255,255,255,.1)}
+        .btn-signup{background:#fff;color:var(--p);box-shadow:var(--s2)}.btn-signup:hover{background:#fafafa;box-shadow:var(--s4)}
+        .user-info{display:none;align-items:center;font-weight:500;font-size:14px;padding:0 8px;cursor:pointer}
+        .hero{background:var(--p);color:#fff;padding:48px 24px;text-align:center;box-shadow:var(--s2)}
+        .hero h2{font-size:36px;font-weight:300;margin:0;letter-spacing:-.5px}
+        .hero h2 b{font-weight:700}
+        .hero h3{font-size:28px;font-weight:300;margin:4px 0 12px}
+        .hero p{font-size:15px;opacity:.9;margin:0 auto;max-width:600px}
+        .auth-card-container{display:flex;justify-content:center;padding:40px 16px}
+        .auth-card{background:#fff;width:100%;max-width:400px;padding:32px;box-shadow:var(--s4);border-radius:2px}
+        .auth-card h2{margin:0 0 24px;font-weight:500;color:var(--dk)}
+        .input-group{margin-bottom:24px}
+        .input-group label{display:block;font-size:12px;color:var(--p);margin-bottom:8px;font-weight:500}
+        .input-group input, .input-group textarea{width:100%;padding:8px 0;border:none;border-bottom:2px solid var(--dv);font-size:16px;outline:none;transition:border-color .2s;font-family:'Roboto',sans-serif}
+        .input-group textarea{resize:none;min-height:60px}
+        .input-group input:focus, .input-group textarea:focus{border-bottom-color:var(--p)}
+        .btn-submit{width:100%;background:var(--p);color:#fff;padding:12px;border:none;border-radius:2px;font-weight:500;text-transform:uppercase;cursor:pointer;box-shadow:var(--s2);margin-top:8px;font-family:'Roboto',sans-serif;font-size:14px;letter-spacing:.5px}
+        .btn-submit:hover{box-shadow:var(--s4);filter:brightness(1.1)}
+        .auth-switch{text-align:center;margin-top:24px;font-size:14px;color:var(--md)}
+        .auth-switch span{color:var(--p);cursor:pointer;font-weight:500}
+        .err{color:#d32f2f;font-size:12px;margin-top:8px;display:none}
+        .content-grid{padding:24px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:24px}
+        .sc{margin-bottom:24px}.fw{grid-column:1/-1}
+        .obar{background:var(--p);color:#fff;padding:12px 24px;display:flex;align-items:center;box-shadow:var(--s2);margin-bottom:16px}
+        .obar h4{margin:0;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+        .ebox{border:1px dashed #ccc;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#999;font-style:italic;font-size:14px;background:#fff}
+        .hlg{min-height:300px}.hmd{min-height:400px}.hsm{min-height:400px}
+        footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margin-top:auto;border-top:1px solid var(--dv)}
+        .ft{color:var(--p);font-size:20px;font-weight:700;margin-bottom:8px}
+        .fc{font-size:14px;letter-spacing:.5px}
+        .view{display:none}.view.active{display:block}
+        .rph{background:var(--p);color:#fff;padding:40px 24px 32px}
+        .rph h2{margin:0 0 0;font-size:28px;font-weight:300;letter-spacing:-.5px;max-width:860px;margin:0 auto}
+        .rph h2 b{font-weight:700}
+        .rph p{margin:8px auto 0;opacity:.85;font-size:14px;max-width:860px}
+        .rwrap{max-width:860px;margin:0 auto;padding:32px 24px 64px}
+        .rcard{background:#fff;box-shadow:var(--s4);border-radius:2px;overflow:hidden}
+        .rsec{padding:28px 32px;border-bottom:1px solid var(--dv)}
+        .rsec:last-child{border-bottom:none}
+        .slbl{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--p);margin:0 0 20px}
+        .fr{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+        .fld label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--md);margin-bottom:10px}
+        .fld input,.fld select{width:100%;padding:10px 0;border:none;border-bottom:2px solid var(--dv);font-size:16px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;background:transparent;color:var(--dk)}
+        .fld input:focus,.fld select:focus{border-bottom-color:var(--p)}
+        .sw{display:flex;align-items:center;gap:16px}
+        .stars{display:flex;gap:4px;flex-direction:row-reverse;justify-content:flex-end}
+        .stars input{display:none}
+        .stars label{font-size:32px;color:#ccc;cursor:pointer;transition:color .15s,transform .15s;margin:0;line-height:1}
+        .stars input:checked~label,.stars label:hover,.stars label:hover~label{color:var(--p)}
+        .stars label:hover{transform:scale(1.2)}
+        .slb{font-size:13px;color:var(--md);font-style:italic}
+        .covs{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+        .covp{width:140px;height:140px;border:2px dashed var(--dv);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fafafa;overflow:hidden;position:relative}
+        .covp img{width:100%;height:100%;object-fit:cover;display:none}
+        .covph{display:flex;flex-direction:column;align-items:center;gap:8px;color:#ccc}
+        .covph i{font-size:40px}.covph span{font-size:11px}
+        .covin{flex:1;min-width:200px}
+        .cor{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--md);font-size:12px}
+        .cor::before,.cor::after{content:'';flex:1;height:1px;background:var(--dv)}
+        .bup{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);border:1px solid var(--dv);padding:10px 16px;border-radius:2px;cursor:pointer;font-size:13px;font-family:'Roboto',sans-serif;font-weight:500;color:var(--dk);transition:background .2s,box-shadow .2s;width:100%}
+        .bup:hover{background:#ebebeb;box-shadow:var(--s2)}.bup i{font-size:18px;color:var(--md)}
+        #cfile, #profile-file-input, #editor-file-input{display:none}
+        .ubadge{font-size:11px;color:var(--md);font-style:italic;margin-top:6px;display:none}
+        .tbar{display:flex;align-items:center;gap:2px;padding:8px 12px;background:#fafafa;border:1px solid var(--dv);border-bottom:none;border-radius:2px 2px 0 0;flex-wrap:wrap}
+        .tb{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;border-radius:2px;cursor:pointer;color:var(--md);font-size:14px;font-family:'Roboto',sans-serif;font-weight:500;transition:background .15s,color .15s}
+        .tb:hover{background:var(--dv);color:var(--dk)}.tb i{font-size:18px}
+        .tbs{width:1px;height:24px;background:var(--dv);margin:0 4px}
+        .editor{min-height:280px;border:1px solid var(--dv);border-radius:0 0 2px 2px;padding:16px;outline:none;font-size:16px;line-height:1.6;color:var(--dk);font-family:'Roboto',sans-serif;overflow-y:auto;background:#fff}
+        .editor:focus{border-color:var(--p)}
+        .editor:empty::before{content:attr(data-ph);color:#bbb;pointer-events:none}
+        .dlo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center}
+        .dlo.open{display:flex}
+        .dlg{background:#fff;border-radius:2px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:24px;width:100%;max-width:420px;margin:16px}
+        .dlg h3{margin:0 0 16px;font-size:16px;font-weight:500;color:var(--dk)}
+        .dinp{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;margin-bottom:16px}
+        .dinp:focus{border-bottom-color:var(--p)}
+        .dact{display:flex;justify-content:flex-end;gap:8px}
+        .dbtn{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:8px 16px;border-radius:2px;cursor:pointer;border:none;letter-spacing:.5px;transition:background .2s}
+        .dcan{background:transparent;color:var(--md)}.dcan:hover{background:var(--bg)}
+        .dok{background:var(--p);color:#fff}.dok:hover{filter:brightness(1.1)}
+        .subbar{padding:24px 32px;display:flex;justify-content:flex-end;gap:12px;border-top:1px solid var(--dv);background:#fafafa}
+        .bdis{font-family:'Roboto',sans-serif;font-size:14px;font-weight:500;text-transform:uppercase;padding:10px 20px;border-radius:2px;cursor:pointer;border:1px solid var(--dv);background:transparent;color:var(--md);letter-spacing:.5px;transition:background .2s}
+        .bdis:hover{background:var(--bg)}
+        .bpub{font-family:'Roboto',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;padding:10px 28px;border-radius:2px;cursor:pointer;border:none;background:var(--p);color:#fff;letter-spacing:.5px;box-shadow:var(--s2);transition:box-shadow .2s,filter .2s;display:flex;align-items:center;gap:8px}
+        .bpub:hover{box-shadow:var(--s4);filter:brightness(1.08)}.bpub i{font-size:18px}
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:2px;font-size:14px;box-shadow:var(--s4);transition:transform .3s;z-index:1000;white-space:nowrap}
+        .toast.show{transform:translateX(-50%) translateY(0)}
+
+        /* Search Tabs Styling */
+        .tabs{display:flex;background:#fff;border-bottom:1px solid var(--dv);position:sticky;top:64px;z-index:90}
+        .tab{flex:1;text-align:center;padding:16px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--md);cursor:pointer;transition:color .2s}
+        .tab.active{color:var(--p);border-bottom:2px solid var(--p)}
+        .search-empty{text-align:center;padding:80px 24px;color:var(--md)}
+        .search-empty b{color:var(--dk)}
+
+        /* Profile Styling — GitHub-style */
+        .profile-layout{display:flex;align-items:flex-start;gap:0;min-height:calc(100vh - 64px)}
+        .profile-sidebar{width:260px;flex-shrink:0;padding:24px 20px;border-right:1px solid var(--dv);background:#fff;position:sticky;top:64px;min-height:calc(100vh - 64px)}
+        .profile-pic-container{width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;position:relative;box-shadow:var(--s2);cursor:pointer;margin-bottom:12px}
+        .profile-pic-container img{width:100%;height:100%;object-fit:cover;display:block}
+        .profile-pic-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);display:flex;align-items:center;justify-content:center;transition:background .2s;color:transparent}
+        .profile-pic-container:hover .profile-pic-overlay{background:rgba(0,0,0,0.5);color:#fff}
+        .profile-name{font-size:20px;font-weight:700;color:var(--dk);margin:0 0 4px}
+        .profile-web{color:var(--p);text-decoration:none;font-weight:500;display:flex;align-items:center;gap:4px;font-size:13px;margin:6px 0;word-break:break-all}
+        .profile-web:hover{text-decoration:underline}
+        .profile-meta{font-size:12px;color:var(--md);margin:4px 0;display:flex;align-items:center;gap:4px}
+        .profile-meta i{font-size:14px}
+        .profile-stats{display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dv)}
+        .stat-item{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--md)}
+        .stat-val{font-weight:700;color:var(--dk)}
+        .profile-bio{font-size:14px;line-height:1.5;color:var(--dk);margin:10px 0}
+        .profile-edit-btn{width:100%;margin-top:14px;border:1px solid var(--dv);background:transparent;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;font-family:'Roboto',sans-serif;transition:background .2s}
+        .profile-edit-btn:hover{background:var(--bg)}
+        .profile-main{flex:1;min-width:0;background:var(--bg)}
+        .profile-tabs{display:flex;background:#fff;border-bottom:1px solid var(--dv);position:sticky;top:64px;z-index:90}
+        .profile-tab{padding:14px 20px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--md);cursor:pointer;transition:color .2s;display:flex;align-items:center;gap:6px;border-bottom:2px solid transparent}
+        .profile-tab.active{color:var(--p);border-bottom-color:var(--p)}
+        .profile-tab-badge{background:var(--dv);color:var(--dk);border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700}
+        .profile-tab.active .profile-tab-badge{background:var(--p);color:#fff}
+        #profile-content{padding:24px}
+        @media(max-width:768px){
+          .profile-layout{flex-direction:column}
+          .profile-sidebar{width:100%;position:static;min-height:unset;border-right:none;border-bottom:1px solid var(--dv)}
+          .profile-pic-container{width:80px;aspect-ratio:1;float:left;margin-right:14px;margin-bottom:4px}
+          .profile-tabs{top:56px}
+        }
+
+        @media(max-width:600px){header{height:56px}.hero{padding:32px 16px}.hero h2{font-size:28px}.search-container.active{width:140px}.btn-auth{padding:6px 10px;font-size:12px}header h1{font-size:18px;margin-left:8px}.btn-new{margin-left:8px;padding:3px 8px;font-size:11px}.content-grid{grid-template-columns:1fr;padding:16px}.fr{grid-template-columns:1fr}.rwrap{padding:16px 12px 48px}.rsec{padding:20px 16px}.subbar{padding:16px}.covs{flex-direction:column}.tabs{top:56px}}
+    </style>
 </head>
 <body>
+
 <div class="toast" id="toast"></div>
 
 <!-- Dialogs -->
-<div class="dlo" id="dlg-link"><div class="dlg"><h3>Insert Link</h3><input class="dinp" id="lnk-text" placeholder="Link text"><input class="dinp" id="lnk-url" placeholder="https://..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-link')">Cancel</button><button class="dbtn dok" onclick="doInsertLink()">Insert</button></div></div></div>
-<div class="dlo" id="dlg-img"><div class="dlg"><h3>Insert Image</h3><input class="dinp" id="img-url" placeholder="https://..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-img')">Cancel</button><button class="dbtn dok" onclick="doInsertImg()">Insert</button></div></div></div>
-<div class="dlo" id="dlg-embed"><div class="dlg"><h3>Embed Content</h3><input class="dinp" id="emb-url" placeholder="YouTube, Spotify, SoundCloud URL..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-embed')">Cancel</button><button class="dbtn dok" onclick="doInsertEmbed()">Embed</button></div></div></div>
-<div class="dlo" id="dlg-edit-profile"><div class="dlg" style="max-width:500px"><h3>Edit Profile</h3><div class="input-group"><label>SCREEN NAME</label><input type="text" id="edit-p-name"></div><div class="input-group"><label>BIO</label><textarea id="edit-p-bio"></textarea></div><div class="input-group"><label>WEBSITE</label><input type="url" id="edit-p-web" placeholder="https://..."></div><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-edit-profile')">Cancel</button><button class="dbtn dok" onclick="saveProfile()">Save Changes</button></div></div></div>
-<!-- Admin add badge dialog -->
-<div class="dlo" id="dlg-add-badge"><div class="dlg"><h3>Add Custom Badge</h3><input class="dinp" id="badge-text" placeholder="Badge text (e.g. Legendary Reviewer)"><input class="dinp" id="badge-color" placeholder="Color (e.g. #7b1fa2)" value="#7b1fa2"><input class="dinp" id="badge-bg" placeholder="Background (e.g. #f3e5f5)" value="#f3e5f5"><input type="hidden" id="badge-target-uid"><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-add-badge')">Cancel</button><button class="dbtn dok" onclick="doAddBadge()">Add Badge</button></div></div></div>
+<div class="dlo" id="dlg-link">
+    <div class="dlg">
+        <h3>Insert Link</h3>
+        <input class="dinp" id="lnk-text" placeholder="Link text">
+        <input class="dinp" id="lnk-url"  placeholder="https://...">
+        <div class="dact">
+            <button class="dbtn dcan" onclick="closeDlg('dlg-link')">Cancel</button>
+            <button class="dbtn dok"  onclick="doInsertLink()">Insert</button>
+        </div>
+    </div>
+</div>
+<div class="dlo" id="dlg-img">
+    <div class="dlg">
+        <h3>Insert Image</h3>
+        <input class="dinp" id="img-url" placeholder="https://...">
+        <div class="dact">
+            <button class="dbtn dcan" onclick="closeDlg('dlg-img')">Cancel</button>
+            <button class="dbtn dok"  onclick="doInsertImg()">Insert</button>
+        </div>
+    </div>
+</div>
+<div class="dlo" id="dlg-embed">
+    <div class="dlg">
+        <h3>Embed Content</h3>
+        <input class="dinp" id="emb-url" placeholder="YouTube, Spotify, SoundCloud URL...">
+        <div class="dact">
+            <button class="dbtn dcan" onclick="closeDlg('dlg-embed')">Cancel</button>
+            <button class="dbtn dok"  onclick="doInsertEmbed()">Embed</button>
+        </div>
+    </div>
+</div>
 
-<!-- Notification panel -->
-<div class="notif-panel" id="notif-panel">
-  <div class="notif-header"><span>Notifications</span><span style="cursor:pointer;color:var(--p);font-size:11px" onclick="markAllRead()">Mark all read</span></div>
-  <div id="notif-list"><div class="notif-empty">No notifications yet.</div></div>
+<!-- Profile Edit Dialog -->
+<div class="dlo" id="dlg-edit-profile">
+    <div class="dlg" style="max-width:500px">
+        <h3>Edit Profile</h3>
+        <div class="input-group"><label>SCREEN NAME</label><input type="text" id="edit-p-name"></div>
+        <div class="input-group"><label>BIO</label><textarea id="edit-p-bio"></textarea></div>
+        <div class="input-group"><label>WEBSITE</label><input type="url" id="edit-p-web" placeholder="https://..."></div>
+        <div class="dact">
+            <button class="dbtn dcan" onclick="closeDlg('dlg-edit-profile')">Cancel</button>
+            <button class="dbtn dok"  onclick="saveProfile()">Save Changes</button>
+        </div>
+    </div>
 </div>
 
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
-  <div class="drawer-header"><h2 id="drawer-user-name">Welcome to LPsun</h2></div>
-  <div class="drawer-items">
-    <div class="drawer-item" onclick="showView('home');closeDrawer()"><i class="material-icons">home</i>Home</div>
-    <div id="drawer-auth-items">
-      <div class="drawer-item" onclick="showView('login');closeDrawer()"><i class="material-icons">login</i>Log In</div>
-      <div class="drawer-item" onclick="showView('signup');closeDrawer()"><i class="material-icons">person_add</i>Sign Up</div>
+    <div class="drawer-header"><h2 id="drawer-user-name">Welcome to LPsun</h2></div>
+    <div class="drawer-items">
+        <div class="drawer-item" onclick="showView('home');closeDrawer()"><i class="material-icons">home</i>Home</div>
+        <div id="drawer-auth-items">
+            <div class="drawer-item" onclick="showView('login');closeDrawer()"><i class="material-icons">login</i>Log In</div>
+            <div class="drawer-item" onclick="showView('signup');closeDrawer()"><i class="material-icons">person_add</i>Sign Up</div>
+        </div>
+        <div class="drawer-divider"></div>
+        <div id="drawer-logged-in-only" style="display:none">
+            <div class="drawer-item" onclick="showProfile(_currentUser.uid);closeDrawer()"><i class="material-icons">person</i>My Profile</div>
+            <div class="drawer-item" onclick="doLogout()"><i class="material-icons">exit_to_app</i>Log Out</div>
+        </div>
     </div>
-    <div class="drawer-divider"></div>
-    <div id="drawer-logged-in-only" style="display:none">
-      <div class="drawer-item" onclick="showProfile(_currentUser.uid);closeDrawer()"><i class="material-icons">person</i>My Profile</div>
-      <div id="drawer-admin-item" style="display:none"><div class="drawer-item" onclick="showView('admin');closeDrawer()"><i class="material-icons" style="color:var(--p)">admin_panel_settings</i><span style="color:var(--p)">Admin Panel</span></div></div>
-      <div class="drawer-item" onclick="doLogout()"><i class="material-icons">exit_to_app</i>Log Out</div>
-    </div>
-  </div>
 </div>
 
 <header>
-  <i class="material-icons menu-icon" onclick="openDrawer()">menu</i>
-  <h1 onclick="showView('home')">LPsun</h1>
-  <button class="btn-new" id="btn-new" onclick="showView('new-review')">+ NEW</button>
-  <div class="header-actions">
-    <div class="search-container" id="searchBox">
-      <i class="material-icons search-icon" id="searchBtn">search</i>
-      <input class="search-input" id="searchInput" placeholder="Search...">
+    <i class="material-icons menu-icon" onclick="openDrawer()">menu</i>
+    <h1 onclick="showView('home')">LPsun</h1>
+    <button class="btn-new" id="btn-new" onclick="showView('new-review')">+ NEW</button>
+    <div class="header-actions">
+        <div class="search-container" id="searchBox">
+            <i class="material-icons search-icon" id="searchBtn">search</i>
+            <input class="search-input" id="searchInput" placeholder="Search...">
+        </div>
+        <div id="logged-out-actions" style="display:flex;gap:8px">
+            <button class="btn-auth btn-login"  onclick="showView('login')">Log In</button>
+            <button class="btn-auth btn-signup" onclick="showView('signup')">Sign Up</button>
+        </div>
+        <div id="logged-in-actions" class="user-info" onclick="showProfile(_currentUser.uid)">
+            <span id="display-name">User</span>
+        </div>
     </div>
-    <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()">
-      <i class="material-icons">notifications</i>
-      <span class="bell-dot" id="bell-dot"></span>
-    </button>
-    <div id="logged-out-actions" style="display:flex;gap:8px">
-      <button class="btn-auth btn-login" onclick="showView('login')">Log In</button>
-      <button class="btn-auth btn-signup" onclick="showView('signup')">Sign Up</button>
-    </div>
-    <div id="logged-in-actions" class="user-info" onclick="showProfile(_currentUser.uid)">
-      <span id="display-name">User</span>
-    </div>
-  </div>
 </header>
 
 <main>
-<!-- Home -->
-<div id="home-view" class="view active">
-  <section class="hero"><h2>Music that <b>matters.</b></h2><h3>Reviewed honestly.</h3><p>Discover albums, write criticism, share your taste.</p></section>
-  <div class="content-grid">
-    <div class="sc fw"><div class="obar"><h4>Review of the Day</h4></div><div id="rotd-container"><div class="ebox hlg">Today's featured review will appear here.</div></div></div>
-    <div class="sc"><div class="obar"><h4>Staff Reviews</h4></div><div id="staff-reviews-container" class="home-reviews-list"></div></div>
-    <div class="sc"><div class="obar"><h4>Newest Reviews</h4></div><div id="newest-reviews-container" class="home-reviews-list"></div></div>
-  </div>
-</div>
-
-<!-- Login -->
-<div id="login-view" class="view">
-  <div class="auth-card-container"><div class="auth-card"><h2>Log In</h2>
-    <div class="input-group"><label>EMAIL ADDRESS</label><input type="email" id="login-email" placeholder="you@example.com"></div>
-    <div class="input-group"><label>PASSWORD</label><input type="password" id="login-pw" placeholder="••••••••"></div>
-    <button class="btn-submit" onclick="doLogin()">Sign In</button>
-    <p class="err" id="login-err"></p>
-    <div class="auth-switch">No account? <span onclick="showView('signup')">Sign Up</span></div>
-  </div></div>
-</div>
-
-<!-- Sign Up -->
-<div id="signup-view" class="view">
-  <div class="auth-card-container"><div class="auth-card"><h2>Create Account</h2>
-    <div class="input-group"><label>USERNAME</label><input type="text" id="signup-name" placeholder="musiclover24"></div>
-    <div class="input-group"><label>EMAIL ADDRESS</label><input type="email" id="signup-email" placeholder="you@example.com"></div>
-    <div class="input-group"><label>PASSWORD</label><input type="password" id="signup-pw" placeholder="••••••••"></div>
-    <button class="btn-submit" onclick="doSignup()">Join LPsun</button>
-    <p class="err" id="signup-err"></p>
-    <div class="auth-switch">Already a member? <span onclick="showView('login')">Log In</span></div>
-  </div></div>
-</div>
-
-<!-- New Review -->
-<div id="new-review-view" class="view">
-  <div class="rph"><h2>Write a <b>Review</b></h2><p>Share your honest take on an album, EP, or track.</p></div>
-  <div class="rwrap"><div class="rcard">
-    <div class="rsec"><p class="slbl">Release Information</p>
-      <div class="fr">
-        <div class="fld"><label>Artist / Band</label><input type="text" id="r-artist" placeholder="e.g. Radiohead"></div>
-        <div class="fld"><label>Album / Release Title</label><input type="text" id="r-work" placeholder="e.g. In Rainbows"></div>
-      </div>
-      <div style="margin-top:24px"><div class="fld"><label>Type of Release</label>
-        <select id="r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select>
-      </div></div>
-    </div>
-    <div class="rsec"><p class="slbl">Your Rating</p>
-      <div class="sw"><div class="stars">
-        <input type="radio" name="rating" id="s5" value="5"><label for="s5">★</label>
-        <input type="radio" name="rating" id="s4" value="4"><label for="s4">★</label>
-        <input type="radio" name="rating" id="s3" value="3"><label for="s3">★</label>
-        <input type="radio" name="rating" id="s2" value="2"><label for="s2">★</label>
-        <input type="radio" name="rating" id="s1" value="1"><label for="s1">★</label>
-      </div><span class="slb" id="star-lbl">Click to rate</span></div>
-    </div>
-    <div class="rsec"><p class="slbl">Cover Art</p>
-      <div class="covs">
-        <div class="covp" id="covp"><img id="covImg" src="" alt="Cover"><div class="covph" id="covPH"><i class="material-icons">album</i><span>Preview</span></div></div>
-        <div class="covin">
-          <div class="fld"><label>Image URL</label><input type="url" id="r-cover-url" placeholder="https://..."></div>
-          <div class="cor">OR</div>
-          <input type="file" id="cfile" accept="image/*">
-          <button class="bup" onclick="document.getElementById('cfile').click()"><i class="material-icons">cloud_upload</i>Upload Image</button>
-          <div class="ubadge" id="ubadge">Converting & saving…</div>
+    <!-- Home -->
+    <div id="home-view" class="view active">
+        <section class="hero">
+            <h2>Music that <b>matters.</b></h2>
+            <h3>Reviewed honestly.</h3>
+            <p>Discover albums, write criticism, share your taste.</p>
+        </section>
+        <div class="content-grid">
+            <div class="sc fw"><div class="obar"><h4>Review of the Day</h4></div><div class="ebox hlg">Today's featured review will appear here.</div></div>
+            <div class="sc"><div class="obar"><h4>Staff Reviews</h4></div><div class="ebox hmd">Our curated staff picks.</div></div>
+            <div class="sc"><div class="obar"><h4>Newest Reviews</h4></div><div class="ebox hsm">Latest updates.</div></div>
         </div>
-      </div>
     </div>
-    <div class="rsec"><p class="slbl">Your Review</p>
-      <div class="tbar">
-        <button class="tb" onclick="fmt('bold')"><b>B</b></button>
-        <button class="tb" onclick="fmt('italic')"><i>I</i></button>
-        <button class="tb" onclick="fmt('underline')"><u>U</u></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="fmt('formatBlock','H2')"><i class="material-icons" style="font-size:16px">title</i></button>
-        <button class="tb" onclick="fmt('formatBlock','blockquote')"><i class="material-icons" style="font-size:16px">format_quote</i></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="fmt('insertUnorderedList')"><i class="material-icons" style="font-size:16px">format_list_bulleted</i></button>
-        <button class="tb" onclick="fmt('insertOrderedList')"><i class="material-icons" style="font-size:16px">format_list_numbered</i></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="openDlg('dlg-link')"><i class="material-icons" style="font-size:16px">link</i></button>
-        <input type="file" id="editor-file-input" accept="image/*" onchange="editorUpload(event)">
-        <button class="tb" onclick="document.getElementById('editor-file-input').click()"><i class="material-icons" style="font-size:16px">add_a_photo</i></button>
-        <button class="tb" onclick="openDlg('dlg-img')"><i class="material-icons" style="font-size:16px">image</i></button>
-        <button class="tb" onclick="openDlg('dlg-embed')"><i class="material-icons" style="font-size:16px">play_circle_outline</i></button>
-      </div>
-      <div class="editor" id="editor" contenteditable="true" data-ph="Write your full review here. Be honest, be detailed, be you." onmouseup="saveSel()" onkeyup="saveSel()"></div>
-    </div>
-    <div class="subbar">
-      <button class="bdis" onclick="if(confirm('Discard this review?'))showView('home')">Discard</button>
-      <button class="bpub" onclick="submitReview()"><i class="material-icons">send</i>Publish Review</button>
-    </div>
-  </div></div>
-</div>
 
-<!-- Edit Review (Full Page) -->
-<div id="edit-review-view" class="view">
-  <div class="rph"><h2>Edit <b>Review</b></h2><p>Update your review details and content.</p></div>
-  <div class="rwrap"><div class="rcard">
-    <input type="hidden" id="edit-review-id">
-    <div class="rsec"><p class="slbl">Release Information</p>
-      <div class="fr">
-        <div class="fld"><label>Artist / Band</label><input type="text" id="edit-r-artist" placeholder="e.g. Radiohead"></div>
-        <div class="fld"><label>Release Title</label><input type="text" id="edit-r-work" placeholder="e.g. In Rainbows"></div>
-      </div>
-      <div style="margin-top:24px"><div class="fld"><label>Type of Release</label>
-        <select id="edit-r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select>
-      </div></div>
-    </div>
-    <div class="rsec"><p class="slbl">Your Rating</p>
-      <div class="sw"><div class="stars">
-        <input type="radio" name="edit-rating" id="es5" value="5"><label for="es5">★</label>
-        <input type="radio" name="edit-rating" id="es4" value="4"><label for="es4">★</label>
-        <input type="radio" name="edit-rating" id="es3" value="3"><label for="es3">★</label>
-        <input type="radio" name="edit-rating" id="es2" value="2"><label for="es2">★</label>
-        <input type="radio" name="edit-rating" id="es1" value="1"><label for="es1">★</label>
-      </div><span class="slb" id="edit-star-lbl">Click to rate</span></div>
-    </div>
-    <div class="rsec"><p class="slbl">Cover Art</p>
-      <div class="covs">
-        <div class="covp" id="edit-covp"><img id="edit-covImg" src="" alt="Cover"><div class="covph" id="edit-covPH"><i class="material-icons">album</i><span>Preview</span></div></div>
-        <div class="covin">
-          <div class="fld"><label>Image URL</label><input type="url" id="edit-r-cover-url" placeholder="https://..."></div>
-          <div class="cor">OR</div>
-          <input type="file" id="edit-cfile" accept="image/*" style="display:none">
-          <button class="bup" onclick="document.getElementById('edit-cfile').click()"><i class="material-icons">cloud_upload</i>Upload Image</button>
+    <!-- Login -->
+    <div id="login-view" class="view">
+        <div class="auth-card-container">
+            <div class="auth-card">
+                <h2>Log In</h2>
+                <div class="input-group"><label>EMAIL ADDRESS</label><input type="email" id="login-email" placeholder="you@example.com"></div>
+                <div class="input-group"><label>PASSWORD</label><input type="password" id="login-pw" placeholder="••••••••"></div>
+                <button class="btn-submit" onclick="doLogin()">Sign In</button>
+                <p class="err" id="login-err"></p>
+                <div class="auth-switch">No account? <span onclick="showView('signup')">Sign Up</span></div>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="rsec"><p class="slbl">Your Review</p>
-      <div class="tbar">
-        <button class="tb" onclick="fmtE('bold')"><b>B</b></button>
-        <button class="tb" onclick="fmtE('italic')"><i>I</i></button>
-        <button class="tb" onclick="fmtE('underline')"><u>U</u></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="fmtE('formatBlock','H2')"><i class="material-icons" style="font-size:16px">title</i></button>
-        <button class="tb" onclick="fmtE('formatBlock','blockquote')"><i class="material-icons" style="font-size:16px">format_quote</i></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="fmtE('insertUnorderedList')"><i class="material-icons" style="font-size:16px">format_list_bulleted</i></button>
-        <button class="tb" onclick="fmtE('insertOrderedList')"><i class="material-icons" style="font-size:16px">format_list_numbered</i></button>
-        <div class="tbs"></div>
-        <button class="tb" onclick="openDlg('dlg-link')"><i class="material-icons" style="font-size:16px">link</i></button>
-        <button class="tb" onclick="openDlg('dlg-img')"><i class="material-icons" style="font-size:16px">image</i></button>
-      </div>
-      <div class="editor" id="edit-editor" contenteditable="true" data-ph="Edit your review here." onmouseup="saveSel()" onkeyup="saveSel()"></div>
-    </div>
-    <div class="subbar">
-      <button class="bdis" onclick="if(confirm('Discard changes?'))history.back()">Cancel</button>
-      <button class="bpub" onclick="saveReviewEdit()"><i class="material-icons">save</i>Save Changes</button>
-    </div>
-  </div></div>
-</div>
 
-<!-- Review Detail Page -->
-<div id="review-detail-view" class="view">
-  <div class="rv-wrap">
-    <div class="rv-hero" id="rv-hero-card"></div>
-    <div class="comments-section" id="rv-comments"></div>
-  </div>
-</div>
-
-<!-- Search View -->
-<div id="search-view" class="view">
-  <div class="tabs">
-    <div class="tab active" id="tab-releases" onclick="setSearchTab('releases')">Releases</div>
-    <div class="tab" id="tab-artists" onclick="setSearchTab('artists')">Artists</div>
-    <div class="tab" id="tab-users" onclick="setSearchTab('users')">Users</div>
-  </div>
-  <div id="search-results-container"></div>
-</div>
-
-<!-- Artist Page -->
-<div id="artist-view" class="view"><div id="artist-view-content"></div></div>
-
-<!-- Release Page (list of reviews for a release) -->
-<div id="release-view" class="view"><div id="release-view-content"></div></div>
-
-<!-- Profile View -->
-<div id="profile-view" class="view">
-  <div class="profile-layout">
-    <aside class="profile-sidebar">
-      <input type="file" id="profile-file-input" accept="image/*" onchange="uploadProfilePic(event)">
-      <div class="profile-pic-container" onclick="checkProfileEdit()?document.getElementById('profile-file-input').click():null">
-        <img id="p-photo" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
-        <div class="profile-pic-overlay" id="p-photo-overlay"><i class="material-icons">add_a_photo</i></div>
-      </div>
-      <div class="profile-name-row">
-        <h2 class="profile-name" id="p-name">Username</h2>
-        <span id="p-verified-icon" style="display:none"><i class="material-icons verified-icon">verified</i></span>
-      </div>
-      <div id="p-badges-row" style="margin-bottom:8px"></div>
-      <div class="profile-bio" id="p-bio">No bio provided.</div>
-      <button class="profile-edit-btn" id="p-edit-btn" style="display:none" onclick="openEditProfile()">Edit Profile</button>
-      <div class="profile-meta" id="p-joined"><i class="material-icons">calendar_today</i> Joined October 2023</div>
-      <a href="#" target="_blank" class="profile-web" id="p-web" style="display:none"><i class="material-icons">link</i><span>website.com</span></a>
-      <div class="profile-stats">
-        <div class="stat-item"><span class="stat-val" id="p-stat-reviews">0</span>&nbsp;reviews</div>
-        <div class="stat-item"><span class="stat-val" id="p-stat-comments">0</span>&nbsp;comments</div>
-      </div>
-    </aside>
-    <div class="profile-main">
-      <div class="profile-tabs">
-        <div class="profile-tab active" onclick="setProfileTab('reviews')"><i class="material-icons" style="font-size:18px">rate_review</i>Reviews <span class="profile-tab-badge" id="tab-badge-reviews">0</span></div>
-        <div class="profile-tab" onclick="setProfileTab('comments')"><i class="material-icons" style="font-size:18px">comment</i>Comments <span class="profile-tab-badge" id="tab-badge-comments">0</span></div>
-      </div>
-      <div id="profile-content"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Admin Panel -->
-<div id="admin-view" class="view">
-  <div class="rph"><h2><b>Admin</b> Panel</h2><p>Staff tools — manage users, reviews, and site features.</p></div>
-  <div class="admin-wrap">
-    <div class="admin-card">
-      <div class="admin-card-header">User Management</div>
-      <div class="admin-card-body">
-        <input class="admin-search-input" id="admin-user-search" placeholder="Search by username or paste Firebase UID..." oninput="adminSearchUsers(this.value)">
-        <div id="admin-user-results"></div>
-        <div id="admin-selected-user" style="display:none;margin-top:16px;padding:16px;background:#fafafa;border-radius:2px;border:1px solid var(--dv)">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-            <img id="asu-avatar" class="admin-user-avatar" src="">
-            <div><div id="asu-name" style="font-weight:700;color:var(--dk)"></div><div id="asu-uid" style="font-size:11px;color:var(--md)"></div></div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="admin-action-btn aab-verify" onclick="adminToggleVerify()"><i class="material-icons" style="font-size:14px">verified</i><span id="asu-verify-label">Verify</span></button>
-            <button class="admin-action-btn aab-badge" onclick="openDlg('dlg-add-badge')"><i class="material-icons" style="font-size:14px">military_tech</i>Add Badge</button>
-            <button class="admin-action-btn aab-warn" onclick="adminWarnUser()"><i class="material-icons" style="font-size:14px">warning</i>Send Warning</button>
-            <button class="admin-action-btn aab-ban" onclick="adminToggleBan()"><i class="material-icons" style="font-size:14px">block</i><span id="asu-ban-label">Ban User</span></button>
-          </div>
+    <!-- Sign Up -->
+    <div id="signup-view" class="view">
+        <div class="auth-card-container">
+            <div class="auth-card">
+                <h2>Create Account</h2>
+                <div class="input-group"><label>USERNAME</label><input type="text" id="signup-name" placeholder="musiclover24"></div>
+                <div class="input-group"><label>EMAIL ADDRESS</label><input type="email" id="signup-email" placeholder="you@example.com"></div>
+                <div class="input-group"><label>PASSWORD</label><input type="password" id="signup-pw" placeholder="••••••••"></div>
+                <button class="btn-submit" onclick="doSignup()">Join LPsun</button>
+                <p class="err" id="signup-err"></p>
+                <div class="auth-switch">Already a member? <span onclick="showView('login')">Log In</span></div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</div>
+
+    <!-- New Review -->
+    <div id="new-review-view" class="view">
+        <div class="rph">
+            <h2>Write a <b>Review</b></h2>
+            <p>Share your honest take on an album, EP, or track.</p>
+        </div>
+        <div class="rwrap"><div class="rcard">
+            <div class="rsec">
+                <p class="slbl">Work Information</p>
+                <div class="fr">
+                    <div class="fld"><label>Artist / Band</label><input type="text" id="r-artist" placeholder="e.g. Radiohead"></div>
+                    <div class="fld"><label>Album / Work Title</label><input type="text" id="r-work" placeholder="e.g. OK Computer"></div>
+                </div>
+                <div style="margin-top:24px">
+                    <div class="fld"><label>Type of Work</label>
+                        <select id="r-type">
+                            <option value="">— Select Type —</option>
+                            <option>LP (Full Album)</option><option>EP</option>
+                            <option>Mixtape</option><option>Single</option>
+                            <option>Live Album</option><option>Compilation</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rsec">
+                <p class="slbl">Your Rating</p>
+                <div class="sw">
+                    <div class="stars">
+                        <input type="radio" name="rating" id="s5" value="5"><label for="s5">★</label>
+                        <input type="radio" name="rating" id="s4" value="4"><label for="s4">★</label>
+                        <input type="radio" name="rating" id="s3" value="3"><label for="s3">★</label>
+                        <input type="radio" name="rating" id="s2" value="2"><label for="s2">★</label>
+                        <input type="radio" name="rating" id="s1" value="1"><label for="s1">★</label>
+                    </div>
+                    <span class="slb" id="star-lbl">Click to rate</span>
+                </div>
+            </div>
+
+            <div class="rsec">
+                <p class="slbl">Cover Art</p>
+                <div class="covs">
+                    <div class="covp" id="covp">
+                        <img id="covImg" src="" alt="Cover">
+                        <div class="covph" id="covPH"><i class="material-icons">album</i><span>Preview</span></div>
+                    </div>
+                    <div class="covin">
+                        <div class="fld"><label>Image URL</label><input type="url" id="r-cover-url" placeholder="https://..."></div>
+                        <div class="cor">OR</div>
+                        <input type="file" id="cfile" accept="image/*">
+                        <button class="bup" onclick="document.getElementById('cfile').click()">
+                            <i class="material-icons">cloud_upload</i>Upload Image
+                        </button>
+                        <div class="ubadge" id="ubadge">Converting & saving…</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rsec">
+                <p class="slbl">Your Review</p>
+                <div class="tbar">
+                    <button class="tb" onclick="fmt('bold')"><b>B</b></button>
+                    <button class="tb" onclick="fmt('italic')"><i>I</i></button>
+                    <button class="tb" onclick="fmt('underline')"><u>U</u></button>
+                    <div class="tbs"></div>
+                    <button class="tb" onclick="fmt('formatBlock','H2')"><i class="material-icons" style="font-size:16px">title</i></button>
+                    <button class="tb" onclick="fmt('formatBlock','blockquote')"><i class="material-icons" style="font-size:16px">format_quote</i></button>
+                    <div class="tbs"></div>
+                    <button class="tb" onclick="fmt('insertUnorderedList')"><i class="material-icons" style="font-size:16px">format_list_bulleted</i></button>
+                    <button class="tb" onclick="fmt('insertOrderedList')"><i class="material-icons" style="font-size:16px">format_list_numbered</i></button>
+                    <div class="tbs"></div>
+                    <button class="tb" onclick="openDlg('dlg-link')"><i class="material-icons" style="font-size:16px">link</i></button>
+                    <input type="file" id="editor-file-input" accept="image/*" onchange="editorUpload(event)">
+                    <button class="tb" onclick="document.getElementById('editor-file-input').click()"><i class="material-icons" style="font-size:16px">add_a_photo</i></button>
+                    <button class="tb" onclick="openDlg('dlg-img')"><i class="material-icons" style="font-size:16px">image</i></button>
+                    <button class="tb" onclick="openDlg('dlg-embed')"><i class="material-icons" style="font-size:16px">play_circle_outline</i></button>
+                </div>
+                <div class="editor" id="editor" contenteditable="true"
+                     data-ph="Write your full review here. Be honest, be detailed, be you."
+                     onmouseup="saveSel()" onkeyup="saveSel()"></div>
+            </div>
+
+            <div class="subbar">
+                <button class="bdis" onclick="if(confirm('Discard this review?'))showView('home')">Discard</button>
+                <button class="bpub" onclick="submitReview()"><i class="material-icons">send</i>Publish Review</button>
+            </div>
+        </div></div>
+    </div>
+
+    <!-- Search View -->
+    <div id="search-view" class="view">
+        <div class="tabs">
+            <div class="tab active" onclick="setSearchTab('reviews')">Reviews</div>
+            <div class="tab" onclick="setSearchTab('artists')">Artists</div>
+            <div class="tab" onclick="setSearchTab('users')">Users</div>
+        </div>
+        <div id="search-results-container"></div>
+    </div>
+
+    <!-- Profile View -->
+    <div id="profile-view" class="view">
+        <div class="profile-layout">
+            <!-- Left Sidebar -->
+            <aside class="profile-sidebar">
+                <input type="file" id="profile-file-input" accept="image/*" onchange="uploadProfilePic(event)">
+                <div class="profile-pic-container" onclick="checkProfileEdit() ? document.getElementById('profile-file-input').click() : null">
+                    <img id="p-photo" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+                    <div class="profile-pic-overlay" id="p-photo-overlay">
+                        <i class="material-icons">add_a_photo</i>
+                    </div>
+                </div>
+                <h2 class="profile-name" id="p-name">Username</h2>
+                <div class="profile-bio" id="p-bio">No bio provided.</div>
+                <button class="profile-edit-btn" id="p-edit-btn" style="display:none" onclick="openEditProfile()">Edit Profile</button>
+                <a href="#" target="_blank" class="profile-web" id="p-web" style="display:none">
+                    <i class="material-icons" style="font-size:14px">link</i><span>website.com</span>
+                </a>
+                <div class="profile-meta" id="p-joined">
+                    <i class="material-icons">calendar_today</i> Joined October 2023
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item"><span class="stat-val" id="p-stat-reviews">0</span>&nbsp;Reviews</div>
+                    <div class="stat-item"><span class="stat-val" id="p-stat-comments">0</span>&nbsp;Comments</div>
+                </div>
+            </aside>
+            <!-- Right Main -->
+            <div class="profile-main">
+                <div class="profile-tabs">
+                    <div class="profile-tab active" onclick="setProfileTab('reviews')">
+                        Reviews <span class="profile-tab-badge" id="tab-badge-reviews">0</span>
+                    </div>
+                    <div class="profile-tab" onclick="setProfileTab('comments')">
+                        Comments <span class="profile-tab-badge" id="tab-badge-comments">0</span>
+                    </div>
+                </div>
+                <div id="profile-content"></div>
+            </div>
+        </div>
+    </div>
 </main>
 
 <footer><div class="ft">LPsun</div><div class="fc">Made by Intergalaxity</div></footer>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-var currentSearchTab='releases',currentProfileTab='reviews',profileViewId=null;
-var adminSelectedUser=null;
+    // Variables for dynamic pages
+    var currentSearchTab = 'reviews';
+    var currentProfileTab = 'reviews';
+    var profileViewId = null;
 
-// ── Navigation ──────────────────────────────────────────────────────────────
-function showView(id){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  var t=document.getElementById(id+'-view');
-  if(t){t.classList.add('active');window.scrollTo(0,0);}
-  document.getElementById('notif-panel').classList.remove('open');
-}
+    // Navigation
+    function showView(id){
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        var t=document.getElementById(id+'-view');
+        if(t){t.classList.add('active');window.scrollTo(0,0);}
+    }
 
-// ── Drawer ──────────────────────────────────────────────────────────────────
-function openDrawer(){document.getElementById('drawerOverlay').style.display='block';setTimeout(()=>document.getElementById('drawer').classList.add('open'),10);}
-function closeDrawer(){document.getElementById('drawer').classList.remove('open');setTimeout(()=>document.getElementById('drawerOverlay').style.display='none',300);}
+    // Drawer
+    function openDrawer(){
+        document.getElementById('drawerOverlay').style.display='block';
+        setTimeout(()=>document.getElementById('drawer').classList.add('open'),10);
+    }
+    function closeDrawer(){
+        document.getElementById('drawer').classList.remove('open');
+        setTimeout(()=>document.getElementById('drawerOverlay').style.display='none',300);
+    }
 
-// ── Notifications ───────────────────────────────────────────────────────────
-function toggleNotifPanel(){document.getElementById('notif-panel').classList.toggle('open');}
-document.addEventListener('click',e=>{var p=document.getElementById('notif-panel');if(p.classList.contains('open')&&!p.contains(e.target)&&!document.getElementById('bell-btn').contains(e.target))p.classList.remove('open');});
-
-function loadNotifications(){
-  if(!_currentUser)return;
-  _db.collection('notifications').where('toUid','==',_currentUser.uid).orderBy('createdAt','desc').limit(20).get().then(snap=>{
-    var unread=0;
-    var html='';
-    snap.docs.forEach(doc=>{
-      var n=doc.data();
-      if(!n.read)unread++;
-      var icon=n.type==='comment'?'comment':n.type==='reply'?'reply':n.type==='warning'?'warning':'info';
-      var time=n.createdAt?new Date(n.createdAt.toMillis()).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      html+=`<div class="notif-item${n.read?'':' unread'}" onclick="markNotifRead('${doc.id}',${JSON.stringify(n).replace(/"/g,'&quot;')})">
-        <div class="notif-icon"><i class="material-icons">${icon}</i></div>
-        <div><div class="notif-text">${n.text||''}</div><div class="notif-time">${time}</div></div>
-      </div>`;
+    // Search
+    var sb=document.getElementById('searchBox'),si=document.getElementById('searchInput');
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        if(!sb.classList.contains('active')){sb.classList.add('active');si.focus();}
+        else if(si.value) performSearch(si.value);
+        else sb.classList.remove('active');
     });
-    document.getElementById('notif-list').innerHTML=html||'<div class="notif-empty">No notifications yet.</div>';
-    document.getElementById('bell-dot').style.display=unread>0?'block':'none';
-  }).catch(()=>{});
-}
-function markNotifRead(id,data){
-  _db.collection('notifications').doc(id).update({read:true});
-  document.getElementById('bell-dot').style.display='none';
-  if(data&&data.reviewId)showReviewDetail(data.reviewId);
-}
-function markAllRead(){
-  if(!_currentUser)return;
-  _db.collection('notifications').where('toUid','==',_currentUser.uid).where('read','==',false).get().then(snap=>{
-    snap.docs.forEach(doc=>doc.ref.update({read:true}));
-    document.getElementById('bell-dot').style.display='none';
-    document.querySelectorAll('.notif-item.unread').forEach(el=>el.classList.remove('unread'));
-  });
-}
-function sendNotification(toUid,type,text,reviewId){
-  if(!toUid||toUid===_currentUser.uid)return;
-  _db.collection('notifications').add({toUid,type,text,reviewId:reviewId||null,read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-}
+    si.addEventListener('keydown', e => { if(e.key==='Enter') performSearch(si.value); });
 
-// ── Search ──────────────────────────────────────────────────────────────────
-var sb=document.getElementById('searchBox'),si=document.getElementById('searchInput');
-document.getElementById('searchBtn').addEventListener('click',()=>{
-  if(!sb.classList.contains('active')){sb.classList.add('active');si.focus();}
-  else if(si.value)performSearch(si.value);
-  else sb.classList.remove('active');
-});
-si.addEventListener('keydown',e=>{if(e.key==='Enter')performSearch(si.value);});
+    function performSearch(q) {
+        if(!q.trim()) return;
+        showView('search');
+        renderSearchResults(q.trim());
+    }
 
-function performSearch(q){
-  if(!q.trim())return;
-  currentSearchTab='releases';
-  showView('search');
-  document.querySelectorAll('#search-view .tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-releases').classList.add('active');
-  renderSearchResults(q.trim());
-}
-function setSearchTab(tab){
-  currentSearchTab=tab;
-  document.querySelectorAll('#search-view .tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  renderSearchResults(si.value);
-}
-function renderSearchResults(q){
-  var container=document.getElementById('search-results-container');
-  if(!q.trim()){container.innerHTML='';return;}
-  container.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Searching...</div>';
-  var ql=q.toLowerCase();
-  if(currentSearchTab==='releases'){
-    _db.collection('reviews').get().then(snap=>{
-      var seen={};
-      snap.docs.forEach(doc=>{var r=doc.data();var key=(r.artist||'').toLowerCase()+'|||'+(r.work||'').toLowerCase();if(!seen[key]&&((r.work||'').toLowerCase().includes(ql)||(r.artist||'').toLowerCase().includes(ql)))seen[key]={artist:r.artist,work:r.work,type:r.type,coverUrl:r.coverUrl};});
-      var items=Object.values(seen);
-      if(!items.length){container.innerHTML=`<div class="search-empty">No releases found for <b>"${q}"</b></div>`;return;}
-      container.innerHTML='<div class="search-results-box">'+items.map(r=>{
-        var cover=r.coverUrl?`<img class="search-result-cover" src="${r.coverUrl}" onerror="this.style.display='none'">`:`<div class="search-result-cover-ph"><i class="material-icons">album</i></div>`;
-        return `<div class="search-result-item" onclick="showReleasePage('${esc(r.artist)}','${esc(r.work)}')">${cover}<div class="search-result-main"><div class="search-result-title">${r.work}</div><div class="search-result-sub">${r.artist}${r.type?' · '+r.type:''}</div></div><i class="material-icons" style="color:var(--md);font-size:18px">chevron_right</i></div>`;
-      }).join('')+'</div>';
+    function setSearchTab(tab) {
+        currentSearchTab = tab;
+        document.querySelectorAll('#search-view .tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        renderSearchResults(si.value);
+    }
+
+    function renderSearchResults(q) {
+        var container = document.getElementById('search-results-container');
+        container.innerHTML = `
+            <div class="search-empty">
+                <b>"${q}"</b> was not found in ${currentSearchTab}.<br><br>
+                Maybe try searching for something else or switching to a different tab?
+            </div>
+        `;
+    }
+
+    // Profile Logic
+    function showProfile(uid) {
+        profileViewId = uid;
+        showView('profile');
+        _db.collection('users').doc(uid).get().then(doc => {
+            if(!doc.exists) return;
+            var data = doc.data();
+            document.getElementById('p-name').textContent = data.displayName;
+            document.getElementById('p-photo').src = data.photo || 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
+            document.getElementById('p-bio').textContent = data.bio || 'No bio provided.';
+            var rc = data.reviewCount || 0, cc = data.commentCount || 0;
+            document.getElementById('p-stat-reviews').textContent = rc;
+            document.getElementById('p-stat-comments').textContent = cc;
+            document.getElementById('tab-badge-reviews').textContent = rc;
+            document.getElementById('tab-badge-comments').textContent = cc;
+            
+            if(data.joined) {
+                var d = data.joined.toDate();
+                document.getElementById('p-joined').innerHTML = '<i class="material-icons">calendar_today</i> Joined ' + d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+            }
+
+            var webEl = document.getElementById('p-web');
+            if(data.website) {
+                webEl.style.display = 'flex';
+                webEl.href = data.website;
+                webEl.querySelector('span').textContent = data.website.replace(/^https?:\/\//,'');
+            } else { webEl.style.display = 'none'; }
+
+            var isMe = _currentUser && _currentUser.uid === uid;
+            document.getElementById('p-edit-btn').style.display = isMe ? 'block' : 'none';
+            document.getElementById('p-photo-overlay').style.display = isMe ? 'flex' : 'none';
+            
+            renderProfileContent(data.displayName);
+        });
+    }
+
+    function checkProfileEdit() { return _currentUser && _currentUser.uid === profileViewId; }
+
+    function setProfileTab(tab) {
+        currentProfileTab = tab;
+        document.querySelectorAll('#profile-view .profile-tab').forEach(t => t.classList.remove('active'));
+        event.target.closest('.profile-tab').classList.add('active');
+        renderProfileContent(document.getElementById('p-name').textContent);
+    }
+
+    function renderProfileContent(name) {
+        var container = document.getElementById('profile-content');
+        container.innerHTML = `<div style="text-align:center; color:var(--md)">${name} does not have any ${currentProfileTab} currently.</div>`;
+    }
+
+    function openEditProfile() {
+        document.getElementById('edit-p-name').value = _userData.displayName || '';
+        document.getElementById('edit-p-bio').value = _userData.bio || '';
+        document.getElementById('edit-p-web').value = _userData.website || '';
+        openDlg('dlg-edit-profile');
+    }
+
+    function saveProfile() {
+        var updates = {
+            displayName: document.getElementById('edit-p-name').value.trim(),
+            bio: document.getElementById('edit-p-bio').value.trim(),
+            website: document.getElementById('edit-p-web').value.trim()
+        };
+        _db.collection('users').doc(_currentUser.uid).update(updates).then(() => {
+            toast('Profile updated!');
+            closeDlg('dlg-edit-profile');
+            showProfile(_currentUser.uid);
+        });
+    }
+
+    function uploadProfilePic(e) {
+        var file = e.target.files[0];
+        if(!file) return;
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            var b64 = event.target.result;
+            _db.collection('users').doc(_currentUser.uid).update({ photo: b64 }).then(() => {
+                document.getElementById('p-photo').src = b64;
+                toast('Photo updated!');
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function editorUpload(e) {
+        var file = e.target.files[0];
+        if(!file) return;
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            var b64 = event.target.result;
+            restoreSel();
+            document.execCommand('insertHTML', false, `<img src="${b64}" style="max-width:100%; border-radius:4px; margin:10px 0;">`);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Toast
+    function toast(msg){
+        var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),3000);
+    }
+
+    // Auth Actions
+    function doLogin(){
+        var email=document.getElementById('login-email').value.trim();
+        var pw=document.getElementById('login-pw').value;
+        var err=document.getElementById('login-err');err.style.display='none';
+        if(!email||!pw){err.textContent='Please enter your email and password.';err.style.display='block';return;}
+        _auth.signInWithEmailAndPassword(email,pw)
+            .catch(e => {err.textContent='Invalid email or password.';err.style.display='block';});
+    }
+    function doSignup(){
+        var name=document.getElementById('signup-name').value.trim();
+        var email=document.getElementById('signup-email').value.trim();
+        var pw=document.getElementById('signup-pw').value;
+        var err=document.getElementById('signup-err');err.style.display='none';
+        if(!name||!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
+        if(pw.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
+        _auth.createUserWithEmailAndPassword(email,pw)
+            .then(uc => {
+                var u = uc.user;
+                return _db.collection('users').doc(u.uid).set({
+                    displayName: name,
+                    joined: firebase.firestore.FieldValue.serverTimestamp(),
+                    photo: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
+                    bio: '',
+                    website: '',
+                    reviewCount: 0,
+                    commentCount: 0
+                });
+            })
+            .catch(e => {err.textContent=e.message;err.style.display='block';});
+    }
+    function doLogout(){_auth.signOut();closeDrawer();showView('home');}
+
+    // Stars UI
+    var slbls=['','Terrible','Poor','Decent','Great','Essential'];
+    document.querySelectorAll('input[name="rating"]').forEach(r => {
+        r.addEventListener('change', () => {
+            document.getElementById('star-lbl').textContent=slbls[r.value]+' ('+r.value+'/5)';
+        });
     });
-  } else if(currentSearchTab==='artists'){
-    _db.collection('reviews').get().then(snap=>{
-      var byLower={};
-      snap.docs.forEach(doc=>{var r=doc.data();var al=(r.artist||'').toLowerCase();if(!al.includes(ql))return;if(!byLower[al])byLower[al]={};if(!byLower[al][r.artist])byLower[al][r.artist]={name:r.artist,releases:{}};byLower[al][r.artist].releases[r.work]=true;});
-      var groups=Object.values(byLower);
-      if(!groups.length){container.innerHTML=`<div class="search-empty">No artists found for <b>"${q}"</b></div>`;return;}
-      var html='';
-      groups.forEach(group=>{
-        var entries=Object.values(group);
-        if(entries.length===1){
-          var a=entries[0],rc=Object.keys(a.releases).length;
-          html+=`<div class="search-results-box" style="margin-bottom:12px"><div class="search-result-item" onclick="showArtistPage('${esc(a.name)}')"><div class="search-result-cover-ph"><i class="material-icons">music_note</i></div><div class="search-result-main"><div class="search-result-title">${a.name}</div><div class="search-result-sub">${rc} release${rc!==1?'s':''} reviewed</div></div><i class="material-icons" style="color:var(--md);font-size:18px">chevron_right</i></div></div>`;
-        } else {
-          var sharedName=entries[0].name;
-          html+=`<div class="search-results-box" style="margin-bottom:12px"><div class="search-section-label" style="display:flex;align-items:center;gap:8px"><i class="material-icons" style="font-size:16px">help_outline</i>Multiple artists named "${sharedName}"</div>`;
-          entries.forEach((a,i)=>{var rc=Object.keys(a.releases).length;html+=`<div class="search-result-item" onclick="showArtistPage('${esc(a.name)}')"><div class="search-result-cover-ph"><i class="material-icons">music_note</i></div><div class="search-result-main"><div class="search-result-title">${a.name} <span style="font-weight:400;color:var(--md);font-size:13px">#${i+1}</span></div><div class="search-result-sub">${rc} release${rc!==1?'s':''} reviewed</div></div><i class="material-icons" style="color:var(--md);font-size:18px">chevron_right</i></div>`;});
-          html+=`<div class="search-result-item" style="color:var(--p);font-weight:500" onclick="toast('Artist creation coming soon!')"><i class="material-icons" style="font-size:20px;color:var(--p)">add_circle_outline</i>+ Add new artist</div></div>`;
+
+    // Cover art Logic
+    var pendingB64=null;
+    function setCover(src){var i=document.getElementById('covImg');i.src=src;i.style.display='block';document.getElementById('covPH').style.display='none';}
+    function clearCover(){document.getElementById('covImg').style.display='none';document.getElementById('covPH').style.display='flex';}
+    document.getElementById('r-cover-url').addEventListener('input', function(){
+        if(this.value.trim()){setCover(this.value.trim());pendingB64=null;}else clearCover();
+    });
+    document.getElementById('cfile').addEventListener('change', function(){
+        var f=this.files[0];if(!f)return;
+        document.getElementById('ubadge').style.display='block';
+        var fr=new FileReader();
+        fr.onload=e=>{pendingB64=e.target.result;setCover(pendingB64);document.getElementById('r-cover-url').value='';document.getElementById('ubadge').style.display='none';};
+        fr.readAsDataURL(f);
+    });
+
+    // Editor Logic
+    function fmt(cmd,val){document.getElementById('editor').focus();document.execCommand(cmd,false,val||null);}
+    var savedRange=null;
+    function saveSel(){var s=window.getSelection();if(s&&s.rangeCount>0)savedRange=s.getRangeAt(0).cloneRange();}
+    function restoreSel(){var ed=document.getElementById('editor');ed.focus();if(savedRange){var s=window.getSelection();s.removeAllRanges();s.addRange(savedRange);}}
+
+    function openDlg(id){saveSel();document.getElementById(id).classList.add('open');var i=document.querySelector('#'+id+' input');if(i)setTimeout(()=>i.focus(),50);}
+    function closeDlg(id){document.getElementById(id).classList.remove('open');}
+
+    function doInsertLink(){
+        var text=document.getElementById('lnk-text').value.trim(),url=document.getElementById('lnk-url').value.trim();
+        if(!url){closeDlg('dlg-link');return;}
+        restoreSel();document.execCommand('insertHTML',false,'<a href="'+url+'" target="_blank" rel="noopener">'+(text||url)+'</a>');
+        closeDlg('dlg-link');document.getElementById('lnk-text').value='';document.getElementById('lnk-url').value='';
+    }
+    function doInsertImg(){
+        var url=document.getElementById('img-url').value.trim();if(!url){closeDlg('dlg-img');return;}
+        restoreSel();document.execCommand('insertHTML',false,'<img src="'+url+'" style="max-width:100%;border-radius:2px;margin:8px 0" alt="">');
+        closeDlg('dlg-img');document.getElementById('img-url').value='';
+    }
+    function doInsertEmbed(){
+        var url=document.getElementById('emb-url').value.trim();if(!url){closeDlg('dlg-embed');return;}
+        restoreSel();var html='';
+        if(url.includes('youtube.com')||url.includes('youtu.be')){
+            var vid=url.includes('youtu.be/')?url.split('youtu.be/')[1].split('?')[0]:(url.split('v=')[1]||'').split('&')[0];
+            if(vid)html='<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:12px 0"><iframe src="https://www.youtube.com/embed/'+vid+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div>';
+        }else if(url.includes('spotify.com')){
+            html='<iframe src="'+url.replace('spotify.com/','spotify.com/embed/')+'" width="100%" height="152" style="border:none;border-radius:12px;margin:8px 0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>';
+        }else if(url.includes('soundcloud.com')){
+            html='<iframe width="100%" height="166" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url='+encodeURIComponent(url)+'&color=%23ef6c00&auto_play=false&show_artwork=true" style="margin:8px 0"></iframe>';
+        }else{
+            html='<div style="border:1px solid #ddd;padding:12px;border-radius:2px;font-size:14px;margin:8px 0"><a href="'+url+'" target="_blank">'+url+'</a></div>';
         }
-      });
-      container.innerHTML=html;
-    });
-  } else {
-    _db.collection('users').get().then(snap=>{
-      var users=snap.docs.filter(doc=>(doc.data().displayName||'').toLowerCase().includes(ql));
-      if(!users.length){container.innerHTML=`<div class="search-empty">No users found for <b>"${q}"</b></div>`;return;}
-      container.innerHTML='<div class="search-results-box">'+users.map(doc=>{
-        var d=doc.data(),isOwner=doc.id===OWNER_UID||d.isStaff;
-        var verified=isOwner?'<i class="material-icons" style="color:var(--p);font-size:14px;vertical-align:middle;margin-left:4px">verified</i>':'';
-        var avatar=d.photo?`<img class="search-result-avatar" src="${d.photo}" onerror="this.style.display='none'">`:`<div class="search-result-cover-ph" style="border-radius:50%"><i class="material-icons">person</i></div>`;
-        return `<div class="search-result-item" onclick="showProfile('${doc.id}')">${avatar}<div class="search-result-main"><div class="search-result-title">${d.displayName||'Unknown'}${verified}</div><div class="search-result-sub">${d.reviewCount||0} reviews</div></div><i class="material-icons" style="color:var(--md);font-size:18px">chevron_right</i></div>`;
-      }).join('')+'</div>';
-    });
-  }
-}
-
-// ── Artist page ──────────────────────────────────────────────────────────────
-function showArtistPage(artist){
-  showView('artist');
-  var el=document.getElementById('artist-view-content');
-  el.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  _db.collection('reviews').where('artist','==',artist).get().then(snap=>{
-    var releases={};
-    snap.docs.forEach(doc=>{var r=doc.data();if(!releases[r.work])releases[r.work]={work:r.work,type:r.type,coverUrl:r.coverUrl,count:0};releases[r.work].count++;});
-    var items=Object.values(releases).sort((a,b)=>a.work.localeCompare(b.work));
-    el.innerHTML=`<div class="artist-hero"><h1>${artist}</h1><p>${items.length} release${items.length!==1?'s':''} reviewed</p></div>
-      <div class="artist-releases"><h3>Releases</h3>${items.map(r=>{
-        var cover=r.coverUrl?`<img class="release-row-cover" src="${r.coverUrl}">`:`<div class="release-row-cover-ph"><i class="material-icons">album</i></div>`;
-        return `<div class="release-row" onclick="showReleasePage('${esc(artist)}','${esc(r.work)}')">${cover}<div class="release-row-info"><div class="release-row-title">${r.work}</div><div class="release-row-meta">${r.type||'Release'}</div></div><div class="release-row-count">${r.count} review${r.count!==1?'s':''} <i class="material-icons" style="font-size:16px;vertical-align:middle">chevron_right</i></div></div>`;
-      }).join('')}</div>`;
-  });
-}
-
-// ── Release page (list of reviews, click to go to review detail) ─────────────
-function showReleasePage(artist,work){
-  showView('release');
-  var el=document.getElementById('release-view-content');
-  el.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  _db.collection('reviews').where('artist','==',artist).where('work','==',work).get().then(snap=>{
-    var docs=snap.docs.sort((a,b)=>{var ta=a.data().createdAt?a.data().createdAt.toMillis():0,tb=b.data().createdAt?b.data().createdAt.toMillis():0;return tb-ta;});
-    var first=docs.length?docs[0].data():{};
-    var cover=first.coverUrl?`<img class="release-hero-cover" src="${first.coverUrl}">`:`<div class="release-hero-cover-ph"><i class="material-icons">album</i></div>`;
-    var reviewsHtml=docs.map(doc=>{
-      var r=doc.data(),id=doc.id;
-      var stars='';for(var i=1;i<=5;i++)stars+=i<=r.rating?'★':'<span class="empty">★</span>';
-      var isOwner=r.authorId===OWNER_UID||r.authorIsStaff;
-      var verified=isOwner?'<i class="material-icons" style="color:var(--p);font-size:13px;vertical-align:middle;margin-left:3px">verified</i>':'';
-      var tmp=document.createElement('div');tmp.innerHTML=r.body||'';
-      var plain=tmp.textContent||'';
-      var preview=plain.length>280?plain.slice(0,280).trimEnd()+'…':plain;
-      return `<div class="release-review-item" onclick="showReviewDetail('${id}')">
-        <div class="release-review-header">
-          <span style="font-size:13px;font-weight:700;color:var(--dk);cursor:pointer">${r.authorName||'Unknown'}${verified}</span>
-          <div class="release-review-stars">${stars}</div>
-        </div>
-        <div style="padding:10px 16px 14px;font-size:14px;color:var(--dk);line-height:1.6">${preview}</div>
-        <div style="padding:0 16px 10px;font-size:12px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.5px">Read full review →</div>
-      </div>`;
-    }).join('');
-    el.innerHTML=`<div class="release-hero">${cover}<div class="release-hero-info"><h1>${work}</h1><h2>${artist}</h2><div style="font-size:13px;color:var(--md)">${docs.length} review${docs.length!==1?'s':''}</div></div></div>
-      <div class="release-reviews-list"><h3>Reviews</h3>${reviewsHtml||'<div style="color:var(--md);font-size:14px">No reviews yet.</div>'}</div>`;
-  });
-}
-
-// ── Review Detail Page ──────────────────────────────────────────────────────
-function showReviewDetail(reviewId){
-  showView('review-detail');
-  var hero=document.getElementById('rv-hero-card'),cmts=document.getElementById('rv-comments');
-  hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  cmts.innerHTML='';
-  _db.collection('reviews').doc(reviewId).get().then(doc=>{
-    if(!doc.exists){hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Review not found.</div>';return;}
-    var r=doc.data();
-    var stars='';for(var i=1;i<=5;i++)stars+=i<=r.rating?'★':'<span class="empty">★</span>';
-    var isOwnerAuthor=r.authorId===OWNER_UID||r.authorIsStaff;
-    var verified=isOwnerAuthor?'<i class="material-icons" style="color:var(--p);font-size:16px;vertical-align:middle;margin-left:4px">verified</i>':'';
-    var cover=r.coverUrl?`<img class="rv-cover" src="${r.coverUrl}">`:`<div class="rv-cover-ph"><i class="material-icons">album</i></div>`;
-    var dateStr=r.createdAt?new Date(r.createdAt.toMillis()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
-    var likeCount=r.likes||0,dislikeCount=r.dislikes||0;
-    var userLiked=_currentUser&&(r.likedBy||[]).includes(_currentUser.uid);
-    var userDisliked=_currentUser&&(r.dislikedBy||[]).includes(_currentUser.uid);
-
-    // Staff actions bar
-    var canEdit=_currentUser&&(_currentUser.uid===r.authorId||isStaff(_currentUser.uid));
-    var canDelete=_currentUser&&(_currentUser.uid===r.authorId||isStaff(_currentUser.uid));
-    var canRotd=_currentUser&&isStaff(_currentUser.uid);
-    var staffBar='';
-    if(canEdit||canDelete||canRotd){
-      staffBar=`<div class="rv-staff-actions">`;
-      if(canRotd)staffBar+=`<button class="staff-btn sb-rotd" onclick="setReviewOfDay('${reviewId}')"><i class="material-icons" style="font-size:14px">star</i>Set as Review of the Day</button>`;
-      if(canEdit)staffBar+=`<button class="staff-btn sb-edit" onclick="openEditReview('${reviewId}')"><i class="material-icons" style="font-size:14px">edit</i>Edit</button>`;
-      if(canDelete)staffBar+=`<button class="staff-btn sb-del" onclick="deleteReview('${reviewId}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button>`;
-      staffBar+=`</div>`;
+        if(html)document.execCommand('insertHTML',false,html);
+        closeDlg('dlg-embed');document.getElementById('emb-url').value='';
     }
 
-    hero.innerHTML=`
-      <div class="rv-top">
-        ${cover}
-        <div class="rv-meta">
-          <div class="rv-work">${r.work||'Untitled'}</div>
-          <div class="rv-artist" onclick="showArtistPage('${esc(r.artist||'')}')">${r.artist||''}</div>
-          <div class="rv-stars">${stars}</div>
-          <div class="rv-byline">Review by <span class="rv-author" onclick="showProfile('${r.authorId}')">${r.authorName||'Unknown'}${verified}</span></div>
-          <div class="rv-date">${dateStr}${r.type?' · '+r.type:''}</div>
-        </div>
-      </div>
-      ${staffBar}
-      <div class="rv-body">${r.body||''}</div>
-      <div class="rv-reactions">
-        <button class="react-btn${userLiked?' active-like':''}" id="rv-like-btn" onclick="reactToReview('${reviewId}','like')">
-          <i class="material-icons">thumb_up</i><span id="rv-like-count">${likeCount}</span>
-        </button>
-        <button class="react-btn${userDisliked?' active-dislike':''}" id="rv-dislike-btn" onclick="reactToReview('${reviewId}','dislike')">
-          <i class="material-icons">thumb_down</i><span id="rv-dislike-count">${dislikeCount}</span>
-        </button>
-      </div>`;
-
-    loadComments(reviewId,r.authorId);
-  });
-}
-
-function reactToReview(reviewId,type){
-  if(!_currentUser){showView('login');return;}
-  _db.collection('reviews').doc(reviewId).get().then(doc=>{
-    var r=doc.data();
-    var likedBy=r.likedBy||[],dislikedBy=r.dislikedBy||[];
-    var uid=_currentUser.uid;
-    var update={};
-    if(type==='like'){
-      if(likedBy.includes(uid)){update.likedBy=firebase.firestore.FieldValue.arrayRemove(uid);update.likes=firebase.firestore.FieldValue.increment(-1);}
-      else{update.likedBy=firebase.firestore.FieldValue.arrayUnion(uid);update.likes=firebase.firestore.FieldValue.increment(1);if(dislikedBy.includes(uid)){update.dislikedBy=firebase.firestore.FieldValue.arrayRemove(uid);update.dislikes=firebase.firestore.FieldValue.increment(-1);}}
-    } else {
-      if(dislikedBy.includes(uid)){update.dislikedBy=firebase.firestore.FieldValue.arrayRemove(uid);update.dislikes=firebase.firestore.FieldValue.increment(-1);}
-      else{update.dislikedBy=firebase.firestore.FieldValue.arrayUnion(uid);update.dislikes=firebase.firestore.FieldValue.increment(1);if(likedBy.includes(uid)){update.likedBy=firebase.firestore.FieldValue.arrayRemove(uid);update.likes=firebase.firestore.FieldValue.increment(-1);}}
+    // Submit Review
+    function submitReview(){
+        if(!_currentUser){toast('Please log in to publish.');return;}
+        var artist=document.getElementById('r-artist').value.trim();
+        var work=document.getElementById('r-work').value.trim();
+        var type=document.getElementById('r-type').value;
+        var rEl=document.querySelector('input[name="rating"]:checked');
+        var body=document.getElementById('editor').innerHTML.trim();
+        if(!artist||!work){toast('Please fill in Artist and Work.');return;}
+        if(!rEl){toast('Please select a star rating.');return;}
+        if(!body){toast('Please write your review.');return;}
+        var cover=pendingB64||document.getElementById('r-cover-url').value.trim()||null;
+        
+        _db.collection('reviews').add({
+            artist:artist,work:work,type:type,rating:parseInt(rEl.value),
+            body:body,coverUrl:cover,
+            authorId:_currentUser.uid,
+            authorName:_userData.displayName || _currentUser.email,
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            _db.collection('users').doc(_currentUser.uid).update({
+                reviewCount: firebase.firestore.FieldValue.increment(1)
+            });
+            toast('Review published! ✓');
+            showView('home');
+        }).catch(e => toast('Error: '+e.message));
     }
-    doc.ref.update(update).then(()=>showReviewDetail(reviewId));
-  });
-}
-
-// ── Comments ──────────────────────────────────────────────────────────────────
-function loadComments(reviewId,reviewAuthorId){
-  var sec=document.getElementById('rv-comments');
-  var myAvatar=(_currentUser&&_userData&&_userData.photo)||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-  var inputHtml=_currentUser?`<div class="comment-box">
-    <img class="comment-avatar" src="${myAvatar}">
-    <div class="comment-input-wrap">
-      <textarea class="comment-input" id="new-comment-input" placeholder="Add a comment…" rows="1" onfocus="this.rows=3;document.getElementById('new-comment-actions').style.display='flex'" onblur="if(!this.value){this.rows=1;document.getElementById('new-comment-actions').style.display='none'}"></textarea>
-      <div class="comment-input-actions" id="new-comment-actions">
-        <button class="comment-btn comment-cancel" onclick="document.getElementById('new-comment-input').value='';document.getElementById('new-comment-input').rows=1;document.getElementById('new-comment-actions').style.display='none'">Cancel</button>
-        <button class="comment-btn comment-submit" onclick="postComment('${reviewId}','${reviewAuthorId}')">Comment</button>
-      </div>
-    </div>
-  </div>`:`<div style="padding:12px 0;font-size:13px;color:var(--md)">
-    <a href="#" onclick="showView('login');return false" style="color:var(--p)">Log in</a> to comment.
-  </div>`;
-
-  sec.innerHTML=`<div class="comments-header">Comments</div>${inputHtml}<div id="comments-list"></div>`;
-
-  _db.collection('reviews').doc(reviewId).collection('comments').orderBy('createdAt','asc').get().then(snap=>{
-    var list=document.getElementById('comments-list');
-    if(!list)return;
-    if(snap.empty){list.innerHTML='<div style="padding:16px 0;color:var(--md);font-size:14px">No comments yet. Be the first!</div>';return;}
-    list.innerHTML=snap.docs.map(doc=>renderComment(doc,reviewId,reviewAuthorId,false)).join('');
-  }).catch(()=>{});
-}
-
-function renderComment(doc,reviewId,reviewAuthorId,isReply){
-  var c=doc.data(),id=doc.id;
-  var isMe=_currentUser&&_currentUser.uid===c.authorId;
-  var canDel=isMe||(_currentUser&&isStaff(_currentUser.uid));
-  var staffVerified=c.authorId===OWNER_UID?'<i class="material-icons" style="color:var(--p);font-size:12px;vertical-align:middle;margin-left:2px">verified</i>':'';
-  var time=c.createdAt?new Date(c.createdAt.toMillis()).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
-  var avatar=c.authorPhoto||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-  var avatarClass=isReply?'reply-avatar':'comment-avatar';
-  var actions='';
-  if(!isReply)actions+=`<button class="comment-action" onclick="toggleReplyBox('${id}','${reviewId}','${reviewAuthorId}')">Reply</button>`;
-  if(isMe)actions+=`<button class="comment-action" onclick="editComment('${id}','${reviewId}',${isReply})">Edit</button>`;
-  if(canDel)actions+=`<button class="comment-action del" onclick="deleteComment('${id}','${reviewId}',${isReply})">Delete</button>`;
-  var repliesSection=isReply?'':`<div class="replies-wrap" id="replies-${id}"></div><div class="reply-box-wrap" id="reply-box-${id}">${replyInputHtml(id,reviewId,reviewAuthorId)}</div>`;
-  return `<div class="${isReply?'reply-item':'comment-item'}" id="cmt-${id}">
-    <img class="${avatarClass}" src="${avatar}">
-    <div class="comment-body">
-      <div class="comment-name-row"><span class="comment-name" onclick="showProfile('${c.authorId}')">${c.authorName||'Unknown'}${staffVerified}</span><span class="comment-time">${time}</span></div>
-      <div class="comment-text" id="ctxt-${id}">${c.text||''}</div>
-      <div class="comment-actions">${actions}</div>
-      ${repliesSection}
-    </div>
-  </div>`;
-}
-
-function replyInputHtml(commentId,reviewId,reviewAuthorId){
-  if(!_currentUser)return '';
-  var myAvatar=(_userData&&_userData.photo)||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-  return `<div class="comment-box" style="margin-top:8px">
-    <img class="reply-avatar" src="${myAvatar}">
-    <div class="comment-input-wrap">
-      <textarea class="comment-input" id="reply-input-${commentId}" placeholder="Add a reply…" rows="2"></textarea>
-      <div class="comment-input-actions" style="display:flex">
-        <button class="comment-btn comment-cancel" onclick="document.getElementById('reply-box-${commentId}').style.display='none'">Cancel</button>
-        <button class="comment-btn comment-submit" onclick="postReply('${commentId}','${reviewId}','${reviewAuthorId}')">Reply</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function toggleReplyBox(commentId,reviewId,reviewAuthorId){
-  if(!_currentUser){showView('login');return;}
-  var box=document.getElementById('reply-box-'+commentId);
-  if(!box)return;
-  box.style.display=box.style.display==='none'||!box.style.display?'block':'none';
-  if(box.style.display==='block'){
-    // Load replies
-    _db.collection('reviews').doc(reviewId).collection('comments').doc(commentId).collection('replies').orderBy('createdAt','asc').get().then(snap=>{
-      var wrap=document.getElementById('replies-'+commentId);
-      if(wrap)wrap.innerHTML=snap.docs.map(doc=>renderComment(doc,reviewId,reviewAuthorId,true)).join('');
-    });
-  }
-}
-
-function postComment(reviewId,reviewAuthorId){
-  if(!_currentUser){showView('login');return;}
-  var input=document.getElementById('new-comment-input');
-  var text=input.value.trim();
-  if(!text)return;
-  _db.collection('reviews').doc(reviewId).collection('comments').add({
-    text,authorId:_currentUser.uid,authorName:_userData.displayName||_currentUser.email,
-    authorPhoto:_userData.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=>{
-    input.value='';input.rows=1;document.getElementById('new-comment-actions').style.display='none';
-    _db.collection('users').doc(_currentUser.uid).update({commentCount:firebase.firestore.FieldValue.increment(1)});
-    sendNotification(reviewAuthorId,'comment',(_userData.displayName||'Someone')+' commented on your review.',reviewId);
-    loadComments(reviewId,reviewAuthorId);
-  });
-}
-
-function postReply(commentId,reviewId,reviewAuthorId){
-  if(!_currentUser){showView('login');return;}
-  var input=document.getElementById('reply-input-'+commentId);
-  var text=input.value.trim();
-  if(!text)return;
-  // Get comment author to notify
-  _db.collection('reviews').doc(reviewId).collection('comments').doc(commentId).get().then(cDoc=>{
-    var commentAuthorId=cDoc.exists?cDoc.data().authorId:null;
-    _db.collection('reviews').doc(reviewId).collection('comments').doc(commentId).collection('replies').add({
-      text,authorId:_currentUser.uid,authorName:_userData.displayName||_currentUser.email,
-      authorPhoto:_userData.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(()=>{
-      if(commentAuthorId)sendNotification(commentAuthorId,'reply',(_userData.displayName||'Someone')+' replied to your comment.',reviewId);
-      input.value='';
-      _db.collection('reviews').doc(reviewId).collection('comments').doc(commentId).collection('replies').orderBy('createdAt','asc').get().then(snap=>{
-        var wrap=document.getElementById('replies-'+commentId);
-        if(wrap)wrap.innerHTML=snap.docs.map(doc=>renderComment(doc,reviewId,reviewAuthorId,true)).join('');
-      });
-    });
-  });
-}
-
-function editComment(commentId,reviewId,isReply){
-  var txtEl=document.getElementById('ctxt-'+commentId);
-  var old=txtEl.textContent;
-  txtEl.innerHTML=`<textarea style="width:100%;border:none;border-bottom:2px solid var(--p);font-size:14px;font-family:'Roboto',sans-serif;outline:none;resize:none;background:transparent;padding:4px 0;color:var(--dk)">${old}</textarea><div style="display:flex;gap:8px;margin-top:6px"><button class="comment-btn comment-cancel" onclick="document.getElementById('ctxt-${commentId}').innerHTML=\`${old}\`">Cancel</button><button class="comment-btn comment-submit" onclick="saveCommentEdit('${commentId}','${reviewId}',${isReply},this.parentElement.previousElementSibling.value)">Save</button></div>`;
-}
-
-function saveCommentEdit(id,reviewId,isReply,newText){
-  var ref=isReply?null:_db.collection('reviews').doc(reviewId).collection('comments').doc(id);
-  if(!ref)return;
-  ref.update({text:newText}).then(()=>{
-    document.getElementById('ctxt-'+id).innerHTML=newText;
-    showReviewDetail(reviewId);
-  });
-}
-
-function deleteComment(id,reviewId,isReply){
-  if(!confirm('Delete this comment?'))return;
-  _db.collection('reviews').doc(reviewId).collection('comments').doc(id).delete().then(()=>{
-    _db.collection('users').doc(_currentUser.uid).update({commentCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
-    showReviewDetail(reviewId);
-  });
-}
-
-// ── Review of the Day ──────────────────────────────────────────────────────
-function setReviewOfDay(reviewId){
-  if(!_currentUser||!isStaff(_currentUser.uid))return;
-  _db.collection('settings').doc('rotd').set({reviewId,setBy:_userData.displayName||'Staff',setAt:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-    toast('Review of the Day set! ✓');loadHomeReviews();
-  });
-}
-
-function loadRotd(){
-  _db.collection('settings').doc('rotd').get().then(doc=>{
-    var el=document.getElementById('rotd-container');
-    if(!doc.exists||!doc.data().reviewId){el.innerHTML='<div class="ebox hlg">No review of the day set yet.</div>';return;}
-    var setBy=doc.data().setBy||'Staff';
-    _db.collection('reviews').doc(doc.data().reviewId).get().then(rdoc=>{
-      if(!rdoc.exists){el.innerHTML='<div class="ebox hlg">Review not found.</div>';return;}
-      var r=rdoc.data(),id=rdoc.id;
-      var stars='';for(var i=1;i<=5;i++)stars+=i<=r.rating?'★':'<span class="empty">★</span>';
-      var cover=r.coverUrl?`<img class="rotd-cover" src="${r.coverUrl}">`:`<div class="rotd-cover-ph"><i class="material-icons">album</i></div>`;
-      var tmp=document.createElement('div');tmp.innerHTML=r.body||'';
-      var excerpt=(tmp.textContent||'').slice(0,200).trimEnd()+'…';
-      el.innerHTML=`<div class="rotd-card" onclick="showReviewDetail('${id}')">
-        <div class="rotd-inner">
-          ${cover}
-          <div class="rotd-info">
-            <div class="rotd-work">${r.work||'Untitled'}</div>
-            <div class="rotd-artist">${r.artist||''}</div>
-            <div class="rotd-stars">${stars}</div>
-            <div class="rotd-excerpt">${excerpt}</div>
-            <div class="rotd-chosen">Chosen by ${setBy}</div>
-          </div>
-        </div>
-      </div>`;
-    });
-  }).catch(()=>{});
-}
-
-// ── Home Reviews ──────────────────────────────────────────────────────────────
-function starsHtml(rating){var s='';for(var i=1;i<=5;i++)s+=i<=rating?'★':'<span class="empty">★</span>';return s;}
-
-function homeReviewCardHtml(doc){
-  var r=doc.data(),id=doc.id;
-  var isOwner=r.authorId===OWNER_UID||r.authorIsStaff;
-  var verified=isOwner?'<i class="material-icons" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>':'';
-  var cover=r.coverUrl?`<img class="home-review-cover" src="${r.coverUrl}" alt="cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="home-review-cover-ph" style="display:none"><i class="material-icons">album</i></div>`:`<div class="home-review-cover-ph"><i class="material-icons">album</i></div>`;
-  return `<div class="home-review-card" onclick="showReviewDetail('${id}')">
-    ${cover}
-    <div class="home-review-info">
-      <div class="home-review-work">${r.work||'Untitled'}</div>
-      <div class="home-review-artist">${r.artist||''}</div>
-      <div class="home-review-stars">${starsHtml(r.rating)}</div>
-      <div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${verified}</div>
-    </div>
-  </div>`;
-}
-
-function loadHomeReviews(){
-  loadRotd();
-  var newestEl=document.getElementById('newest-reviews-container');
-  var staffEl=document.getElementById('staff-reviews-container');
-  if(!newestEl)return;
-  newestEl.innerHTML='<div style="padding:16px;color:var(--md);font-size:13px">Loading...</div>';
-  staffEl.innerHTML='<div style="padding:16px;color:var(--md);font-size:13px">Loading...</div>';
-
-  _db.collection('reviews').orderBy('createdAt','desc').get().then(snap=>{
-    if(snap.empty){newestEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No reviews yet.</div>';return;}
-    var all=snap.docs;
-    var first3=all.slice(0,3);
-    var rest=all.slice(3);
-    newestEl.innerHTML=first3.map(doc=>homeReviewCardHtml(doc)).join('');
-    if(rest.length>0){
-      newestEl.innerHTML+=`<div class="show-more-bar" id="newest-show-more" onclick="expandReviews('newest',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
-    }
-  }).catch(e=>{newestEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No reviews yet.</div>';});
-
-  _db.collection('reviews').where('authorId','==',OWNER_UID).get().then(snap=>{
-    if(snap.empty){staffEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No staff reviews yet.</div>';return;}
-    var docs=snap.docs.sort((a,b)=>{var ta=a.data().createdAt?a.data().createdAt.toMillis():0,tb=b.data().createdAt?b.data().createdAt.toMillis():0;return tb-ta;});
-    var first3=docs.slice(0,3),rest=docs.slice(3);
-    staffEl.innerHTML=first3.map(doc=>homeReviewCardHtml(doc)).join('');
-    if(rest.length>0){
-      staffEl.innerHTML+=`<div class="show-more-bar" id="staff-show-more" onclick="expandReviews('staff',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
-    }
-  }).catch(()=>{staffEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No staff reviews yet.</div>';});
-}
-
-function expandReviews(section,ids){
-  var container=document.getElementById(section+'-reviews-container');
-  var bar=document.getElementById(section+'-show-more');
-  if(bar)bar.remove();
-  if(!ids.length)return;
-  Promise.all(ids.map(id=>_db.collection('reviews').doc(id).get())).then(docs=>{
-    docs.forEach(doc=>{if(doc.exists){var div=document.createElement('div');div.innerHTML=homeReviewCardHtml(doc);container.appendChild(div.firstChild);}});
-  });
-}
-
-window.addEventListener('DOMContentLoaded',loadHomeReviews);
-
-// ── Profile ──────────────────────────────────────────────────────────────────
-function showProfile(uid){
-  profileViewId=uid;showView('profile');
-  _db.collection('users').doc(uid).get().then(doc=>{
-    if(!doc.exists)return;
-    var data=doc.data();
-    document.getElementById('p-name').textContent=data.displayName;
-    var isOwner=uid===OWNER_UID||data.isStaff||data.verified;
-    document.getElementById('p-verified-icon').style.display=isOwner?'inline':'none';
-    document.getElementById('p-photo').src=data.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-    document.getElementById('p-bio').textContent=data.bio||'No bio provided.';
-    var rc=data.reviewCount||0,cc=data.commentCount||0;
-    document.getElementById('p-stat-reviews').textContent=rc;
-    document.getElementById('p-stat-comments').textContent=cc;
-    document.getElementById('tab-badge-reviews').textContent=rc;
-    document.getElementById('tab-badge-comments').textContent=cc;
-    // Badges
-    var badgesRow=document.getElementById('p-badges-row');
-    badgesRow.innerHTML='';
-    if(uid===OWNER_UID)badgesRow.innerHTML+='<span class="owner-badge">Owner</span>';
-    if(data.banned)badgesRow.innerHTML+='<span class="banned-badge">Banned</span>';
-    (data.badges||[]).forEach(b=>{
-      badgesRow.innerHTML+=`<span class="custom-badge" style="background:${b.bg||'#e0e0e0'};color:${b.color||'#333'}">${b.text}</span>`;
-    });
-    if(data.joined){var d=data.joined.toDate();document.getElementById('p-joined').innerHTML='<i class="material-icons">calendar_today</i> Joined '+d.toLocaleDateString('en-US',{month:'long',year:'numeric'});}
-    var webEl=document.getElementById('p-web');
-    if(data.website){webEl.style.display='flex';webEl.href=data.website;webEl.querySelector('span').textContent=data.website.replace(/^https?:\/\//,'');}else webEl.style.display='none';
-    var isMe=_currentUser&&_currentUser.uid===uid;
-    document.getElementById('p-edit-btn').style.display=isMe?'block':'none';
-    document.getElementById('p-photo-overlay').style.display=isMe?'flex':'none';
-    renderProfileContent();
-  });
-}
-function checkProfileEdit(){return _currentUser&&_currentUser.uid===profileViewId;}
-function setProfileTab(tab){
-  currentProfileTab=tab;
-  document.querySelectorAll('#profile-view .profile-tab').forEach(t=>t.classList.remove('active'));
-  event.target.closest('.profile-tab').classList.add('active');
-  renderProfileContent();
-}
-function renderProfileContent(){
-  var container=document.getElementById('profile-content');
-  if(currentProfileTab!=='reviews'){container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md);font-size:15px">No comments to show yet.</div>';return;}
-  container.innerHTML='<div style="text-align:center;padding:40px;color:var(--md)">Loading...</div>';
-  var isMe=_currentUser&&_currentUser.uid===profileViewId;
-  var canEdit=isMe||(_currentUser&&isStaff(_currentUser.uid));
-  _db.collection('reviews').where('authorId','==',profileViewId).get().then(snap=>{
-    if(snap.empty){container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md);font-size:15px">No reviews to show yet.</div>';return;}
-    var docs=snap.docs.sort((a,b)=>{var ta=a.data().createdAt?a.data().createdAt.toMillis():0,tb=b.data().createdAt?b.data().createdAt.toMillis():0;return tb-ta;});
-    var html='<div class="reviews-grid">';
-    docs.forEach(doc=>{
-      var r=doc.data(),id=doc.id;
-      var stars='';for(var i=1;i<=5;i++)stars+=i<=r.rating?'★':'<span class="empty">★</span>';
-      var cover=r.coverUrl?`<img class="review-cover" src="${r.coverUrl}" alt="cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="review-cover-placeholder" style="display:none"><i class="material-icons">album</i></div>`:`<div class="review-cover-placeholder"><i class="material-icons">album</i></div>`;
-      var actions=canEdit?`<div class="review-actions"><button class="review-action-btn btn-edit-review" onclick="event.stopPropagation();openEditReview('${id}')"><i class="material-icons">edit</i>Edit</button><button class="review-action-btn btn-del-review" onclick="event.stopPropagation();deleteReview('${id}')"><i class="material-icons">delete</i>Delete</button></div>`:'';
-      html+=`<div class="review-card" onclick="showReviewDetail('${id}')"><div class="review-card-inner">${cover}<div class="review-info"><div class="review-work">${r.work||'Untitled'}</div><div class="review-artist">${r.artist||''}</div><div class="review-stars">${stars}</div></div></div>${actions}</div>`;
-    });
-    html+='</div>';
-    container.innerHTML=html;
-  }).catch(()=>{container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md);font-size:15px">No reviews to show yet.</div>';});
-}
-
-// ── Edit & Delete Review ──────────────────────────────────────────────────────
-var editPendingB64=null;
-function fmtE(cmd,val){document.getElementById('edit-editor').focus();document.execCommand(cmd,false,val||null);}
-function openEditReview(id){
-  _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists)return;
-    var r=doc.data();
-    document.getElementById('edit-review-id').value=id;
-    document.getElementById('edit-r-artist').value=r.artist||'';
-    document.getElementById('edit-r-work').value=r.work||'';
-    document.getElementById('edit-r-type').value=r.type||'';
-    document.getElementById('edit-editor').innerHTML=r.body||'';
-    editPendingB64=null;
-    document.querySelectorAll('input[name="edit-rating"]').forEach(el=>el.checked=false);
-    if(r.rating){var rEl=document.getElementById('es'+r.rating);if(rEl)rEl.checked=true;var slbls=['','Terrible','Poor','Decent','Great','Essential'];document.getElementById('edit-star-lbl').textContent=slbls[r.rating]+' ('+r.rating+'/5)';}
-    if(r.coverUrl){document.getElementById('edit-covImg').src=r.coverUrl;document.getElementById('edit-covImg').style.display='block';document.getElementById('edit-covPH').style.display='none';document.getElementById('edit-r-cover-url').value=r.coverUrl.startsWith('data:')?'':r.coverUrl;if(r.coverUrl.startsWith('data:'))editPendingB64=r.coverUrl;}
-    else{document.getElementById('edit-covImg').style.display='none';document.getElementById('edit-covPH').style.display='flex';document.getElementById('edit-r-cover-url').value='';}
-    showView('edit-review');
-  });
-}
-document.getElementById('edit-r-cover-url').addEventListener('input',function(){
-  if(this.value.trim()){document.getElementById('edit-covImg').src=this.value.trim();document.getElementById('edit-covImg').style.display='block';document.getElementById('edit-covPH').style.display='none';editPendingB64=null;}
-  else{document.getElementById('edit-covImg').style.display='none';document.getElementById('edit-covPH').style.display='flex';}
-});
-document.getElementById('edit-cfile').addEventListener('change',function(){
-  var f=this.files[0];if(!f)return;
-  var fr=new FileReader();fr.onload=e=>{editPendingB64=e.target.result;document.getElementById('edit-covImg').src=editPendingB64;document.getElementById('edit-covImg').style.display='block';document.getElementById('edit-covPH').style.display='none';document.getElementById('edit-r-cover-url').value='';};fr.readAsDataURL(f);
-});
-document.querySelectorAll('input[name="edit-rating"]').forEach(r=>{r.addEventListener('change',()=>{var slbls=['','Terrible','Poor','Decent','Great','Essential'];document.getElementById('edit-star-lbl').textContent=slbls[r.value]+' ('+r.value+'/5)';});});
-function saveReviewEdit(){
-  var id=document.getElementById('edit-review-id').value;
-  var artist=document.getElementById('edit-r-artist').value.trim();
-  var work=document.getElementById('edit-r-work').value.trim();
-  var type=document.getElementById('edit-r-type').value;
-  var rEl=document.querySelector('input[name="edit-rating"]:checked');
-  var body=document.getElementById('edit-editor').innerHTML.trim();
-  if(!artist||!work){toast('Please fill in Artist and Work.');return;}
-  if(!rEl){toast('Please select a rating.');return;}
-  if(!body){toast('Please write your review.');return;}
-  var cover=editPendingB64||document.getElementById('edit-r-cover-url').value.trim()||null;
-  _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover}).then(()=>{
-    toast('Review updated! ✓');loadHomeReviews();showReviewDetail(id);
-  }).catch(e=>toast('Error: '+e.message));
-}
-function deleteReview(id){
-  if(!confirm('Delete this review? This cannot be undone.'))return;
-  _db.collection('reviews').doc(id).get().then(doc=>{
-    var authorId=doc.exists?doc.data().authorId:null;
-    doc.ref.delete().then(()=>{
-      if(authorId)_db.collection('users').doc(authorId).update({reviewCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
-      toast('Review deleted.');loadHomeReviews();
-      var active=document.querySelector('.view.active');
-      if(active&&(active.id==='review-detail-view'))showView('home');
-      else if(active&&active.id==='profile-view')renderProfileContent();
-    });
-  }).catch(e=>toast('Error: '+e.message));
-}
-
-// ── Submit Review ──────────────────────────────────────────────────────────────
-var pendingB64=null;
-function setCover(src){var i=document.getElementById('covImg');i.src=src;i.style.display='block';document.getElementById('covPH').style.display='none';}
-function clearCover(){document.getElementById('covImg').style.display='none';document.getElementById('covPH').style.display='flex';}
-document.getElementById('r-cover-url').addEventListener('input',function(){if(this.value.trim()){setCover(this.value.trim());pendingB64=null;}else clearCover();});
-document.getElementById('cfile').addEventListener('change',function(){
-  var f=this.files[0];if(!f)return;document.getElementById('ubadge').style.display='block';
-  var fr=new FileReader();fr.onload=e=>{pendingB64=e.target.result;setCover(pendingB64);document.getElementById('r-cover-url').value='';document.getElementById('ubadge').style.display='none';};fr.readAsDataURL(f);
-});
-var slbls=['','Terrible','Poor','Decent','Great','Essential'];
-document.querySelectorAll('input[name="rating"]').forEach(r=>{r.addEventListener('change',()=>{document.getElementById('star-lbl').textContent=slbls[r.value]+' ('+r.value+'/5)';});});
-function submitReview(){
-  if(!_currentUser){toast('Please log in to publish.');return;}
-  var artist=document.getElementById('r-artist').value.trim(),work=document.getElementById('r-work').value.trim(),type=document.getElementById('r-type').value;
-  var rEl=document.querySelector('input[name="rating"]:checked'),body=document.getElementById('editor').innerHTML.trim();
-  if(!artist||!work){toast('Please fill in Artist and Work.');return;}
-  if(!rEl){toast('Please select a star rating.');return;}
-  if(!body){toast('Please write your review.');return;}
-  var cover=pendingB64||document.getElementById('r-cover-url').value.trim()||null;
-  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,authorId:_currentUser.uid,authorName:_userData.displayName||_currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(()=>{
-    _db.collection('users').doc(_currentUser.uid).update({reviewCount:firebase.firestore.FieldValue.increment(1)});
-    toast('Review published! ✓');
-    // Reset form
-    document.getElementById('r-artist').value='';document.getElementById('r-work').value='';document.getElementById('r-type').value='';
-    document.querySelector('input[name="rating"]:checked') && (document.querySelector('input[name="rating"]:checked').checked=false);
-    document.getElementById('editor').innerHTML='';clearCover();pendingB64=null;document.getElementById('star-lbl').textContent='Click to rate';
-    loadHomeReviews();showView('home');
-  }).catch(e=>toast('Error: '+e.message));
-}
-
-// ── Profile edit ──────────────────────────────────────────────────────────────
-function openEditProfile(){document.getElementById('edit-p-name').value=_userData.displayName||'';document.getElementById('edit-p-bio').value=_userData.bio||'';document.getElementById('edit-p-web').value=_userData.website||'';openDlg('dlg-edit-profile');}
-function saveProfile(){
-  var updates={displayName:document.getElementById('edit-p-name').value.trim(),bio:document.getElementById('edit-p-bio').value.trim(),website:document.getElementById('edit-p-web').value.trim()};
-  _db.collection('users').doc(_currentUser.uid).update(updates).then(()=>{_userData={..._userData,...updates};toast('Profile updated!');closeDlg('dlg-edit-profile');showProfile(_currentUser.uid);});
-}
-function uploadProfilePic(e){
-  var file=e.target.files[0];if(!file)return;
-  var reader=new FileReader();reader.onload=function(event){var b64=event.target.result;_db.collection('users').doc(_currentUser.uid).update({photo:b64}).then(()=>{document.getElementById('p-photo').src=b64;toast('Photo updated!');});};reader.readAsDataURL(file);
-}
-
-// ── Admin Panel ──────────────────────────────────────────────────────────────
-function adminSearchUsers(q){
-  var res=document.getElementById('admin-user-results');
-  if(!q.trim()){res.innerHTML='';return;}
-  var ql=q.toLowerCase();
-  // Check if it looks like a UID (long string, no spaces)
-  if(q.length>20&&!q.includes(' ')){
-    _db.collection('users').doc(q).get().then(doc=>{
-      if(!doc.exists){res.innerHTML='<div style="padding:12px;color:var(--md);font-size:13px">No user found with that UID.</div>';return;}
-      res.innerHTML=renderAdminUserResult(doc);
-    });
-    return;
-  }
-  _db.collection('users').get().then(snap=>{
-    var matches=snap.docs.filter(doc=>(doc.data().displayName||'').toLowerCase().includes(ql));
-    if(!matches.length){res.innerHTML='<div style="padding:12px;color:var(--md);font-size:13px">No users found.</div>';return;}
-    res.innerHTML=matches.slice(0,8).map(doc=>renderAdminUserResult(doc)).join('');
-  });
-}
-function renderAdminUserResult(doc){
-  var d=doc.data();
-  var avatar=d.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-  return `<div class="admin-user-result" onclick="selectAdminUser('${doc.id}')">
-    <img class="admin-user-avatar" src="${avatar}">
-    <div><div style="font-size:14px;font-weight:700;color:var(--dk)">${d.displayName||'Unknown'}</div><div style="font-size:11px;color:var(--md)">${doc.id}</div></div>
-    ${d.banned?'<span class="banned-badge" style="margin-left:auto">Banned</span>':''}
-    ${d.verified||doc.id===OWNER_UID?'<i class="material-icons" style="color:var(--p);font-size:16px;margin-left:auto">verified</i>':''}
-  </div>`;
-}
-function selectAdminUser(uid){
-  document.getElementById('badge-target-uid').value=uid;
-  _db.collection('users').doc(uid).get().then(doc=>{
-    if(!doc.exists)return;
-    var d=doc.data();
-    adminSelectedUser={uid,data:d};
-    document.getElementById('admin-selected-user').style.display='block';
-    document.getElementById('asu-avatar').src=d.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-    document.getElementById('asu-name').textContent=d.displayName||'Unknown';
-    document.getElementById('asu-uid').textContent=uid;
-    document.getElementById('asu-verify-label').textContent=d.verified?'Remove Verify':'Verify';
-    document.getElementById('asu-ban-label').textContent=d.banned?'Unban User':'Ban User';
-  });
-}
-function adminToggleVerify(){
-  if(!adminSelectedUser)return;
-  var newVal=!adminSelectedUser.data.verified;
-  _db.collection('users').doc(adminSelectedUser.uid).update({verified:newVal}).then(()=>{
-    toast(newVal?'User verified! ✓':'Verification removed.');
-    adminSelectedUser.data.verified=newVal;
-    document.getElementById('asu-verify-label').textContent=newVal?'Remove Verify':'Verify';
-  });
-}
-function adminToggleBan(){
-  if(!adminSelectedUser)return;
-  var newVal=!adminSelectedUser.data.banned;
-  if(newVal&&!confirm('Ban '+adminSelectedUser.data.displayName+'? They will lose access.'))return;
-  _db.collection('users').doc(adminSelectedUser.uid).update({banned:newVal}).then(()=>{
-    toast(newVal?'User banned.':'User unbanned.');
-    adminSelectedUser.data.banned=newVal;
-    document.getElementById('asu-ban-label').textContent=newVal?'Unban User':'Ban User';
-  });
-}
-function adminWarnUser(){
-  if(!adminSelectedUser)return;
-  var msg=prompt('Warning message to send to '+adminSelectedUser.data.displayName+':');
-  if(!msg)return;
-  sendNotification(adminSelectedUser.uid,'warning','⚠️ Staff warning: '+msg,null);
-  toast('Warning sent.');
-}
-function doAddBadge(){
-  var uid=document.getElementById('badge-target-uid').value;
-  var text=document.getElementById('badge-text').value.trim();
-  var color=document.getElementById('badge-color').value.trim()||'#7b1fa2';
-  var bg=document.getElementById('badge-bg').value.trim()||'#f3e5f5';
-  if(!uid||!text){toast('Fill in badge text.');return;}
-  _db.collection('users').doc(uid).update({badges:firebase.firestore.FieldValue.arrayUnion({text,color,bg})}).then(()=>{
-    toast('Badge added! ✓');closeDlg('dlg-add-badge');
-  });
-}
-
-// ── Auth ──────────────────────────────────────────────────────────────────────
-function doLogin(){
-  var email=document.getElementById('login-email').value.trim(),pw=document.getElementById('login-pw').value;
-  var err=document.getElementById('login-err');err.style.display='none';
-  if(!email||!pw){err.textContent='Please enter your email and password.';err.style.display='block';return;}
-  _auth.signInWithEmailAndPassword(email,pw).catch(e=>{err.textContent='Invalid email or password.';err.style.display='block';});
-}
-function doSignup(){
-  var name=document.getElementById('signup-name').value.trim(),email=document.getElementById('signup-email').value.trim(),pw=document.getElementById('signup-pw').value;
-  var err=document.getElementById('signup-err');err.style.display='none';
-  if(!name||!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
-  if(pw.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
-  _auth.createUserWithEmailAndPassword(email,pw).then(uc=>{
-    return _db.collection('users').doc(uc.user.uid).set({displayName:name,joined:firebase.firestore.FieldValue.serverTimestamp(),photo:'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',bio:'',website:'',reviewCount:0,commentCount:0,badges:[]});
-  }).catch(e=>{err.textContent=e.message;err.style.display='block';});
-}
-function doLogout(){_auth.signOut();closeDrawer();showView('home');}
-
-// ── Editor helpers ────────────────────────────────────────────────────────────
-function fmt(cmd,val){document.getElementById('editor').focus();document.execCommand(cmd,false,val||null);}
-var savedRange=null;
-function saveSel(){var s=window.getSelection();if(s&&s.rangeCount>0)savedRange=s.getRangeAt(0).cloneRange();}
-function restoreSel(){var ed=document.getElementById('editor');ed.focus();if(savedRange){var s=window.getSelection();s.removeAllRanges();s.addRange(savedRange);}}
-function openDlg(id){saveSel();document.getElementById(id).classList.add('open');var i=document.querySelector('#'+id+' input');if(i)setTimeout(()=>i.focus(),50);}
-function closeDlg(id){document.getElementById(id).classList.remove('open');}
-function doInsertLink(){var text=document.getElementById('lnk-text').value.trim(),url=document.getElementById('lnk-url').value.trim();if(!url){closeDlg('dlg-link');return;}restoreSel();document.execCommand('insertHTML',false,'<a href="'+url+'" target="_blank" rel="noopener">'+(text||url)+'</a>');closeDlg('dlg-link');document.getElementById('lnk-text').value='';document.getElementById('lnk-url').value='';}
-function doInsertImg(){var url=document.getElementById('img-url').value.trim();if(!url){closeDlg('dlg-img');return;}restoreSel();document.execCommand('insertHTML',false,'<img src="'+url+'" style="max-width:100%;border-radius:2px;margin:8px 0" alt="">');closeDlg('dlg-img');document.getElementById('img-url').value='';}
-function doInsertEmbed(){var url=document.getElementById('emb-url').value.trim();if(!url){closeDlg('dlg-embed');return;}restoreSel();var html='';if(url.includes('youtube.com')||url.includes('youtu.be')){var vid=url.includes('youtu.be/')?url.split('youtu.be/')[1].split('?')[0]:(url.split('v=')[1]||'').split('&')[0];if(vid)html='<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:12px 0"><iframe src="https://www.youtube.com/embed/'+vid+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div>';}else if(url.includes('spotify.com')){html='<iframe src="'+url.replace('spotify.com/','spotify.com/embed/')+'" width="100%" height="152" style="border:none;border-radius:12px;margin:8px 0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>';}else if(url.includes('soundcloud.com')){html='<iframe width="100%" height="166" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url='+encodeURIComponent(url)+'&color=%23ef6c00&auto_play=false&show_artwork=true" style="margin:8px 0"></iframe>';}else{html='<div style="border:1px solid #ddd;padding:12px;border-radius:2px;font-size:14px;margin:8px 0"><a href="'+url+'" target="_blank">'+url+'</a></div>';}if(html)document.execCommand('insertHTML',false,html);closeDlg('dlg-embed');document.getElementById('emb-url').value='';}
-function editorUpload(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(event){var b64=event.target.result;restoreSel();document.execCommand('insertHTML',false,`<img src="${b64}" style="max-width:100%;border-radius:4px;margin:10px 0;">`);};reader.readAsDataURL(file);}
-function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
-function esc(s){return (s||'').replace(/'/g,"\\'");}
 </script>
 </body>
 </html>
