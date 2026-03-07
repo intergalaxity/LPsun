@@ -451,7 +451,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
       <span class="notif-hlink" onclick="navTo('notifications');closeNotifPanel()">See all →</span>
     </div>
   </div>
-  <div id="notif-list"><div class="notif-empty">No notifications yet.</div></div>
+  <div id="notif-list"><div class="notif-empty">No notifications for right now.</div></div>
 </div>
 
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
@@ -765,44 +765,48 @@ function notifIconName(type){return type==='warning'?'warning':type==='reply'?'r
 
 function loadNotifications(){
   if(!_currentUser)return;
-  _db.collection('notifications').where('toUid','==',_currentUser.uid).orderBy('createdAt','desc').limit(15).get().then(snap=>{
+  _db.collection('notifications').where('toUid','==',_currentUser.uid).limit(20).get().then(function(snap){
+    var docs=snap.docs.slice().sort(function(a,b){
+      var ta=a.data().createdAt?a.data().createdAt.toMillis():0;
+      var tb=b.data().createdAt?b.data().createdAt.toMillis():0;
+      return tb-ta;
+    }).slice(0,15);
     var unread=0,html='';
-    snap.docs.forEach(doc=>{
+    docs.forEach(function(doc){
       var n=doc.data();if(!n.read)unread++;
       var ic=notifIconClass(n.type),iconName=notifIconName(n.type);
       var time=n.createdAt?new Date(n.createdAt.toMillis()).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      html+=`<div class="notif-item${n.read?'':' unread'}" onclick="markNotifRead('${doc.id}','${n.reviewId||''}')">
-        <div class="notif-icon ${ic}"><i class="material-icons">${iconName}</i></div>
-        <div><div class="notif-text">${esc2(n.text||'')}</div><div class="notif-time">${time}</div></div>
-      </div>`;
+      html+='<div class="notif-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\')"><div class="notif-icon '+ic+'"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
     });
-    document.getElementById('notif-list').innerHTML=html||'<div class="notif-empty">No notifications yet.</div>';
+    document.getElementById('notif-list').innerHTML=html||'<div class="notif-empty">No notifications for right now.</div>';
     document.getElementById('bell-dot').style.display=unread>0?'block':'none';
-  }).catch(()=>{});
+  }).catch(function(){});
 }
 
 function loadAllNotifications(){
   if(!_currentUser){navTo('login');return;}
   var wrap=document.getElementById('all-notifs-list');
   wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  _db.collection('notifications').where('toUid','==',_currentUser.uid).orderBy('createdAt','desc').get().then(snap=>{
-    if(snap.empty){wrap.innerHTML='<div style="padding:60px;text-align:center;color:var(--md);font-size:15px">No notifications yet.</div>';return;}
+  _db.collection('notifications').where('toUid','==',_currentUser.uid).get().then(function(snap){
+    if(snap.empty){wrap.innerHTML='<div style="padding:60px;text-align:center;color:var(--md);font-size:15px">No notifications for right now.</div>';return;}
+    var docs=snap.docs.slice().sort(function(a,b){
+      var ta=a.data().createdAt?a.data().createdAt.toMillis():0;
+      var tb=b.data().createdAt?b.data().createdAt.toMillis():0;
+      return tb-ta;
+    });
     var html='';
     var batch=_db.batch();
-    snap.docs.forEach(doc=>{
+    docs.forEach(function(doc){
       var n=doc.data();
       var ic=notifIconClass(n.type),iconName=notifIconName(n.type);
       var time=n.createdAt?new Date(n.createdAt.toMillis()).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';
-      html+=`<div class="notif-full-item${n.read?'':' unread'}" onclick="markNotifRead('${doc.id}','${n.reviewId||''}')">
-        <div class="notif-icon ${ic}" style="width:36px;height:36px;flex-shrink:0"><i class="material-icons">${iconName}</i></div>
-        <div><div class="notif-text">${esc2(n.text||'')}</div><div class="notif-time">${time}</div></div>
-      </div>`;
+      html+='<div class="notif-full-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\')"><div class="notif-icon '+ic+'" style="width:36px;height:36px;flex-shrink:0"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
       if(!n.read)batch.update(doc.ref,{read:true});
     });
-    batch.commit().catch(()=>{});
+    batch.commit().catch(function(){});
     document.getElementById('bell-dot').style.display='none';
     wrap.innerHTML=html;
-  }).catch(()=>{wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load.</div>';});
+  }).catch(function(){wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load.</div>';});
 }
 
 function markNotifRead(id,reviewId){
@@ -941,8 +945,10 @@ function showReleasePage(artist,work){
 // ── Review Detail ────────────────────────────────────────────────────────────
 function showReviewDetail(reviewId){
   var hero=document.getElementById('rv-hero-card'),cmts=document.getElementById('rv-comments');
-  hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';cmts.innerHTML='';
-  _db.collection('reviews').doc(reviewId).get().then(doc=>{
+  if(!hero||!cmts)return;
+  hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
+  cmts.innerHTML='';
+  _db.collection('reviews').doc(reviewId).get().then(function(doc){
     if(!doc.exists){hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Review not found.</div>';return;}
     var r=doc.data();
     var stars='';for(var i=1;i<=5;i++)stars+=i<=r.rating?'★':'<span class="empty">★</span>';
@@ -954,32 +960,46 @@ function showReviewDetail(reviewId){
     var userDisliked=_currentUser&&(r.dislikedBy||[]).includes(_currentUser.uid);
     var canEdit=_currentUser&&(_currentUser.uid===r.authorId||isStaff(_currentUser.uid,_userData));
     var canRotd=_currentUser&&isStaff(_currentUser.uid,_userData);
+    // Cover art
+    var coverHtml;
+    if(r.coverUrl){
+      coverHtml='<div style="width:200px;min-width:200px;flex-shrink:0;background:#e0e0e0;align-self:stretch;position:relative;min-height:200px">'
+        +'<img src="'+r.coverUrl+'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">'
+        +'</div>';
+    } else {
+      coverHtml='<div style="width:200px;min-width:200px;flex-shrink:0;background:#e0e0e0;display:flex;align-items:center;justify-content:center;min-height:200px">'
+        +'<i class="material-icons" style="font-size:60px;color:#bbb">album</i>'
+        +'</div>';
+    }
+    // Staff action bar
     var staffBar='';
     if(canEdit||canRotd){
       staffBar='<div class="rv-staff-actions">';
-      if(canRotd)staffBar+=`<button class="staff-btn sb-rotd" onclick="setReviewOfDay('${reviewId}')"><i class="material-icons" style="font-size:14px">star</i>Set as Review of the Day</button>`;
-      if(canEdit)staffBar+=`<button class="staff-btn sb-edit" onclick="navTo('edit-review/${reviewId}')"><i class="material-icons" style="font-size:14px">edit</i>Edit</button>`;
-      if(canEdit)staffBar+=`<button class="staff-btn sb-del" onclick="deleteReview('${reviewId}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button>`;
+      if(canRotd)staffBar+='<button class="staff-btn sb-rotd" onclick="setReviewOfDay(\''+reviewId+'\')"><i class="material-icons" style="font-size:14px">star</i>Set as Review of the Day</button>';
+      if(canEdit)staffBar+='<button class="staff-btn sb-edit" onclick="navTo(\'edit-review/'+reviewId+'\')"><i class="material-icons" style="font-size:14px">edit</i>Edit</button>';
+      if(canEdit)staffBar+='<button class="staff-btn sb-del" onclick="deleteReview(\''+reviewId+'\')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button>';
       staffBar+='</div>';
     }
-    var coverHtml=r.coverUrl
-      ?`<div class="rv-cover-col" style="width:200px;position:relative;overflow:hidden;flex-shrink:0;background:#e0e0e0"><img style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" src="${r.coverUrl}"><div style="padding-top:100%"></div></div>`
-      :`<div class="rv-cover-col" style="width:200px;flex-shrink:0;background:#e0e0e0;display:flex;align-items:center;justify-content:center;min-height:180px"><div class="rv-cover-col-ph"><i class="material-icons" style="font-size:60px;color:#bbb">album</i></div></div>`;
-    hero.innerHTML=`
-      <div class="rv-top">${coverHtml}<div class="rv-meta">
-        <div class="rv-work">${r.work||'Untitled'}</div>
-        <div class="rv-artist" onclick="navTo('artist/${encodeURIComponent(r.artist||'')}')">${r.artist||''}</div>
-        <div class="rv-stars">${stars}</div>
-        <div class="rv-byline">Review by <span class="rv-author" onclick="navTo('profile/${r.authorId}')">${r.authorName||'Unknown'}${ver}</span></div>
-        <div class="rv-date">${dateStr}${r.type?' · '+r.type:''}</div>
-      </div></div>
-      ${staffBar}
-      <div class="rv-body">${r.body||''}</div>
-      <div class="rv-reactions">
-        <button class="react-btn${userLiked?' active-like':''}" onclick="reactToReview('${reviewId}','like')"><i class="material-icons">thumb_up</i><span id="rv-like-count">${likeCount}</span></button>
-        <button class="react-btn${userDisliked?' active-dislike':''}" onclick="reactToReview('${reviewId}','dislike')"><i class="material-icons">thumb_down</i><span id="rv-dislike-count">${dislikeCount}</span></button>
-      </div>`;
+    hero.innerHTML=
+      '<div class="rv-top">'+coverHtml
+        +'<div class="rv-meta">'
+          +'<div class="rv-work">'+esc2(r.work||'Untitled')+'</div>'
+          +'<div class="rv-artist" onclick="navTo(\'artist/'+encodeURIComponent(r.artist||'')+'\')">'+esc2(r.artist||'')+'</div>'
+          +'<div class="rv-stars">'+stars+'</div>'
+          +'<div class="rv-byline">Review by <span class="rv-author" onclick="navTo(\'profile/'+r.authorId+'\')">'+esc2(r.authorName||'Unknown')+ver+'</span></div>'
+          +'<div class="rv-date">'+dateStr+(r.type?' · '+r.type:'')+'</div>'
+        +'</div>'
+      +'</div>'
+      +staffBar
+      +'<div class="rv-body">'+( r.body||'')+'</div>'
+      +'<div class="rv-reactions">'
+        +'<button class="react-btn'+(userLiked?' active-like':'')+'" onclick="reactToReview(\''+reviewId+'\',\'like\')"><i class="material-icons">thumb_up</i><span id="rv-like-count">'+likeCount+'</span></button>'
+        +'<button class="react-btn'+(userDisliked?' active-dislike':'')+'" onclick="reactToReview(\''+reviewId+'\',\'dislike\')"><i class="material-icons">thumb_down</i><span id="rv-dislike-count">'+dislikeCount+'</span></button>'
+      +'</div>';
     loadComments(reviewId,r.authorId);
+  }).catch(function(e){
+    hero.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load review. Please try again.</div>';
+    console.error('showReviewDetail error:',e);
   });
 }
 
@@ -997,23 +1017,40 @@ function reactToReview(reviewId,type){
 // ── Comments ────────────────────────────────────────────────────────────────
 function loadComments(reviewId,reviewAuthorId){
   var sec=document.getElementById('rv-comments');
+  if(!sec)return;
   var myAv=(_userData&&_userData.photo)||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
   var inputHtml=_currentUser
-    ?`<div class="comment-box"><img class="comment-avatar" src="${myAv}"><div class="comment-input-wrap"><textarea class="comment-input" id="new-comment-input" placeholder="Add a comment..." rows="1" onfocus="this.rows=3;document.getElementById('new-comment-actions').style.display='flex'" onblur="if(!this.value.trim()){this.rows=1;document.getElementById('new-comment-actions').style.display='none'}"></textarea><div class="comment-input-actions" id="new-comment-actions"><button class="comment-btn comment-cancel" onclick="var i=document.getElementById('new-comment-input');i.value='';i.rows=1;document.getElementById('new-comment-actions').style.display='none'">Cancel</button><button class="comment-btn comment-submit" onclick="postComment('${reviewId}','${reviewAuthorId}')">Comment</button></div></div></div>`
-    :`<div style="padding:12px 0;font-size:14px;color:var(--md)"><a style="color:var(--p);cursor:pointer" onclick="navTo('login')">Log in</a> to comment.</div>`;
-  sec.innerHTML=`<div class="comments-header">Comments</div>${inputHtml}<div id="comments-list"><div style="padding:16px 0;color:var(--md);font-size:14px">Loading...</div></div>`;
-  _db.collection('reviews').doc(reviewId).collection('comments').orderBy('createdAt','asc').get().then(snap=>{
+    ?'<div class="comment-box"><img class="comment-avatar" src="'+myAv+'"><div class="comment-input-wrap"><textarea class="comment-input" id="new-comment-input" placeholder="Add a comment..." rows="1" onfocus="this.rows=3;document.getElementById(\'new-comment-actions\').style.display=\'flex\'" onblur="if(!this.value.trim()){this.rows=1;document.getElementById(\'new-comment-actions\').style.display=\'none\'}"></textarea><div class="comment-input-actions" id="new-comment-actions"><button class="comment-btn comment-cancel" onclick="var i=document.getElementById(\'new-comment-input\');i.value=\'\';i.rows=1;document.getElementById(\'new-comment-actions\').style.display=\'none\'">Cancel</button><button class="comment-btn comment-submit" onclick="postComment(\''+reviewId+'\',\''+reviewAuthorId+'\')">Comment</button></div></div></div>'
+    :'<div style="padding:12px 0;font-size:14px;color:var(--md)"><a style="color:var(--p);cursor:pointer" onclick="navTo(\'login\')">Log in</a> to comment.</div>';
+  sec.innerHTML='<div class="comments-header">Comments</div>'+inputHtml+'<div id="comments-list"><div style="padding:16px 0;color:var(--md);font-size:14px">Loading...</div></div>';
+  _db.collection('reviews').doc(reviewId).collection('comments').get().then(function(snap){
     var listEl=document.getElementById('comments-list');if(!listEl)return;
     if(snap.empty){listEl.innerHTML='<div style="padding:16px 0;color:var(--md);font-size:14px">No comments yet. Be the first!</div>';return;}
-    listEl.innerHTML=snap.docs.map(doc=>renderComment(doc,reviewId,reviewAuthorId,false)).join('');
-    // load replies for each comment
-    snap.docs.forEach(doc=>{
-      _db.collection('reviews').doc(reviewId).collection('comments').doc(doc.id).collection('replies').orderBy('createdAt','asc').get().then(rSnap=>{
-        var wrap=document.getElementById('replies-'+doc.id);
-        if(wrap&&!rSnap.empty)wrap.innerHTML=rSnap.docs.map(rd=>renderComment(rd,reviewId,reviewAuthorId,true)).join('');
-      });
+    // sort by createdAt client-side to avoid needing a composite index
+    var docs=snap.docs.slice().sort(function(a,b){
+      var ta=a.data().createdAt?a.data().createdAt.toMillis():0;
+      var tb=b.data().createdAt?b.data().createdAt.toMillis():0;
+      return ta-tb;
     });
-  }).catch(()=>{});
+    listEl.innerHTML=docs.map(function(doc){return renderComment(doc,reviewId,reviewAuthorId,false);}).join('');
+    docs.forEach(function(doc){
+      _db.collection('reviews').doc(reviewId).collection('comments').doc(doc.id).collection('replies').get().then(function(rSnap){
+        var wrap=document.getElementById('replies-'+doc.id);
+        if(wrap&&!rSnap.empty){
+          var rdocs=rSnap.docs.slice().sort(function(a,b){
+            var ta=a.data().createdAt?a.data().createdAt.toMillis():0;
+            var tb=b.data().createdAt?b.data().createdAt.toMillis():0;
+            return ta-tb;
+          });
+          wrap.innerHTML=rdocs.map(function(rd){return renderComment(rd,reviewId,reviewAuthorId,true);}).join('');
+        }
+      }).catch(function(){});
+    });
+  }).catch(function(e){
+    var listEl=document.getElementById('comments-list');
+    if(listEl)listEl.innerHTML='<div style="padding:16px 0;color:var(--md);font-size:14px">Could not load comments.</div>';
+    console.error('loadComments error:',e);
+  });
 }
 
 function renderComment(doc,reviewId,reviewAuthorId,isReply){
@@ -1280,29 +1317,29 @@ function renderProfileContent(){
   } else {
     // Comments tab
     container.innerHTML='<div style="text-align:center;padding:40px;color:var(--md)">Loading...</div>';
-    _db.collection('userComments').where('uid','==',profileViewId).orderBy('createdAt','desc').limit(50).get().then(async snap=>{
+    _db.collection('userComments').where('uid','==',profileViewId).limit(50).get().then(async function(snap){
       if(snap.empty){container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md)">No comments yet.</div>';return;}
-      var items=snap.docs;
-      if(q)items=items.filter(d=>(d.data().text||'').toLowerCase().includes(q));
+      var items=snap.docs.slice().sort(function(a,b){
+        var ta=a.data().createdAt?a.data().createdAt.toMillis():0;
+        var tb=b.data().createdAt?b.data().createdAt.toMillis():0;
+        return tb-ta;
+      });
+      if(q)items=items.filter(function(d){return (d.data().text||'').toLowerCase().includes(q);});
       if(!items.length){container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md)">No matching comments.</div>';return;}
-      // fetch review data for context
-      var reviewIds=[...new Set(items.map(d=>d.data().reviewId).filter(Boolean))];
+      var reviewIds=[...new Set(items.map(function(d){return d.data().reviewId;}).filter(Boolean))];
       var rvCache={};
-      await Promise.all(reviewIds.map(rid=>_db.collection('reviews').doc(rid).get().then(rd=>{if(rd.exists)rvCache[rid]=rd.data();})));
+      await Promise.all(reviewIds.map(function(rid){return _db.collection('reviews').doc(rid).get().then(function(rd){if(rd.exists)rvCache[rid]=rd.data();});}));
       var userName=document.getElementById('p-name').textContent;
       var html='<div style="padding:4px 0">';
-      items.forEach(d=>{
+      items.forEach(function(d){
         var c=d.data();
         var rv=rvCache[c.reviewId];
-        var rvWork=rv?rv.work:'a review';
-        var rvAuthor=rv?rv.authorName:'someone';
-        html+=`<div class="profile-cmt-card" onclick="navTo('review/${c.reviewId||''}')">
-          <div class="pcm-meta">${userName} on <span class="pcm-link" onclick="event.stopPropagation();navTo('review/${c.reviewId||''}')">${rvWork}</span> by ${rvAuthor}:</div>
-          <div class="pcm-text">${c.text||''}</div>
-        </div>`;
+        var rvWork=rv?esc2(rv.work||'a review'):'a review';
+        var rvAuthor=rv?esc2(rv.authorName||'someone'):'someone';
+        html+='<div class="profile-cmt-card" onclick="navTo(\'review/'+(c.reviewId||'')+'\')"><div class="pcm-meta">'+esc2(userName)+' on <span class="pcm-link" onclick="event.stopPropagation();navTo(\'review/'+(c.reviewId||'')+'\')">'+(rvWork)+'</span> by '+(rvAuthor)+':</div><div class="pcm-text">'+esc2(c.text||'')+'</div></div>';
       });
       html+='</div>';container.innerHTML=html;
-    }).catch(()=>{container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md)">No comments yet.</div>';});
+    }).catch(function(){container.innerHTML='<div style="text-align:center;padding:80px 24px;color:var(--md)">No comments yet.</div>';});
   }
 }
 
