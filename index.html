@@ -725,7 +725,7 @@ var currentSearchTab='releases',currentProfileTab='reviews',profileViewId=null;
 var adminSelectedUser=null;
 var _savedRange=null, _activeEditorId='editor';
 
-// ── Hash routing ────────────────────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────────────
 function navTo(path){
   var parts=path.split('/');
   var page=parts[0];
@@ -1193,9 +1193,8 @@ function expandReviews(btn,section,ids){
     docs.forEach(doc=>{if(doc.exists){var div=document.createElement('div');div.innerHTML=homeCardHtml(doc);container.appendChild(div.firstChild);}});
   });
 }
-window.addEventListener('DOMContentLoaded',function(){
-  loadHomeReviews();
-});
+// Load home on startup
+loadHomeReviews();
 
 // ── Profile ──────────────────────────────────────────────────────────────────
 function showProfile(uid){
