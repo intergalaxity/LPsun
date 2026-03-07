@@ -440,7 +440,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
 <div class="dlo" id="dlg-link"><div class="dlg"><h3>Insert Link</h3><input class="dinp" id="lnk-text" placeholder="Link text"><input class="dinp" id="lnk-url" placeholder="https://..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-link')">Cancel</button><button class="dbtn dok" onclick="doInsertLink()">Insert</button></div></div></div>
 <div class="dlo" id="dlg-img"><div class="dlg"><h3>Insert Image</h3><input class="dinp" id="img-url" placeholder="https://..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-img')">Cancel</button><button class="dbtn dok" onclick="doInsertImg()">Insert</button></div></div></div>
 <div class="dlo" id="dlg-embed"><div class="dlg"><h3>Embed Content</h3><input class="dinp" id="emb-url" placeholder="YouTube, Spotify, SoundCloud URL..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-embed')">Cancel</button><button class="dbtn dok" onclick="doInsertEmbed()">Embed</button></div></div></div>
-<div class="dlo" id="dlg-edit-profile"><div class="dlg" style="max-width:500px"><h3>Edit Profile</h3><div class="input-group"><label>SCREEN NAME</label><input type="text" id="edit-p-name"></div><div class="input-group"><label>BIO</label><textarea id="edit-p-bio"></textarea></div><div class="input-group"><label>WEBSITE</label><input type="url" id="edit-p-web" placeholder="https://..."></div><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-edit-profile')">Cancel</button><button class="dbtn dok" onclick="saveProfile()">Save Changes</button></div></div></div>
+<div class="dlo" id="dlg-edit-profile"><div class="dlg" style="max-width:500px"><h3>Edit Profile</h3><div class="input-group"><label>SCREEN NAME</label><input type="text" id="edit-p-name" oninput="checkUsernameAvailability(this.value)"><div id="username-check-status" style="font-size:12px;margin-top:5px;min-height:16px"></div></div><div class="input-group"><label>BIO</label><textarea id="edit-p-bio"></textarea></div><div class="input-group"><label>WEBSITE</label><input type="url" id="edit-p-web" placeholder="https://..."></div><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-edit-profile')">Cancel</button><button class="dbtn dok" id="save-profile-btn" onclick="saveProfile()">Save Changes</button></div></div></div>
 <div class="dlo" id="dlg-add-badge"><div class="dlg"><h3>Add Custom Badge</h3><p class="dlg-note">Tip: naming a badge <b>Staff</b> grants staff permissions to that user.</p><input class="dinp" id="badge-text" placeholder="Badge name (e.g. Staff, Critic, Legend)"><input class="dinp" id="badge-color" placeholder="Text color hex" value="#7b1fa2"><input class="dinp" id="badge-bg" placeholder="Background color hex" value="#f3e5f5"><input type="hidden" id="badge-target-uid"><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-add-badge')">Cancel</button><button class="dbtn dok" onclick="doAddBadge()">Add Badge</button></div></div></div>
 
 <!-- Notification panel -->
@@ -1324,14 +1324,78 @@ function openEditProfile(){
   document.getElementById('edit-p-name').value=_userData.displayName||'';
   document.getElementById('edit-p-bio').value=_userData.bio||'';
   document.getElementById('edit-p-web').value=_userData.website||'';
+  var st=document.getElementById('username-check-status');
+  if(st){st.textContent='✓ Your current username';st.style.color='#2e7d32';}
+  var saveBtn=document.getElementById('save-profile-btn');
+  if(saveBtn)saveBtn.disabled=false;
   openDlg('dlg-edit-profile');
 }
 function saveProfile(){
-  var updates={displayName:document.getElementById('edit-p-name').value.trim(),bio:document.getElementById('edit-p-bio').value.trim(),website:document.getElementById('edit-p-web').value.trim()};
-  _db.collection('users').doc(_currentUser.uid).update(updates).then(()=>{
-    _userData=Object.assign({},_userData,updates);
-    toast('Profile updated!');closeDlg('dlg-edit-profile');showProfile(_currentUser.uid);
+  var newName=document.getElementById('edit-p-name').value.trim();
+  var bio=document.getElementById('edit-p-bio').value.trim();
+  var website=document.getElementById('edit-p-web').value.trim();
+  if(!newName){toast('Username cannot be empty.');return;}
+  var saveBtn=document.getElementById('save-profile-btn');
+  var oldName=(_userData&&_userData.displayName)||'';
+  // If name hasn't changed, skip uniqueness check
+  if(newName.toLowerCase()===oldName.toLowerCase()){
+    var updates={displayName:newName,displayNameLower:newName.toLowerCase(),bio,website};
+    _db.collection('users').doc(_currentUser.uid).update(updates).then(()=>{
+      _userData=Object.assign({},_userData,updates);
+      toast('Profile updated!');closeDlg('dlg-edit-profile');showProfile(_currentUser.uid);
+    });
+    return;
+  }
+  if(saveBtn)saveBtn.disabled=true;
+  // Check new name isn't taken
+  _db.collection('users').get().then(snap=>{
+    var taken=snap.docs.some(d=>d.id!==_currentUser.uid&&(d.data().displayName||'').toLowerCase()===newName.toLowerCase());
+    if(taken){
+      toast('That username is already taken!');
+      var st=document.getElementById('username-check-status');
+      if(st){st.textContent='✗ Already taken';st.style.color='#d32f2f';}
+      if(saveBtn)saveBtn.disabled=false;
+      return;
+    }
+    var updates={displayName:newName,displayNameLower:newName.toLowerCase(),bio,website};
+    _db.collection('users').doc(_currentUser.uid).update(updates).then(()=>{
+      _userData=Object.assign({},_userData,updates);
+      if(saveBtn)saveBtn.disabled=false;
+      toast('Profile updated!');closeDlg('dlg-edit-profile');showProfile(_currentUser.uid);
+    });
+  }).catch(()=>{
+    if(saveBtn)saveBtn.disabled=false;
+    toast('Error checking username. Try again.');
   });
+}
+var _usernameCheckTimer=null;
+function checkUsernameAvailability(val){
+  var st=document.getElementById('username-check-status');
+  var saveBtn=document.getElementById('save-profile-btn');
+  if(!st)return;
+  var name=val.trim();
+  var currentName=(_userData&&_userData.displayName)||'';
+  if(!name){st.textContent='';if(saveBtn)saveBtn.disabled=false;return;}
+  // Same as current name — always available
+  if(name.toLowerCase()===currentName.toLowerCase()){
+    st.textContent='✓ Your current username';st.style.color='#2e7d32';
+    if(saveBtn)saveBtn.disabled=false;return;
+  }
+  st.textContent='Checking…';st.style.color='var(--md)';
+  if(saveBtn)saveBtn.disabled=true;
+  clearTimeout(_usernameCheckTimer);
+  _usernameCheckTimer=setTimeout(()=>{
+    _db.collection('users').get().then(snap=>{
+      var taken=snap.docs.some(d=>d.id!==_currentUser.uid&&(d.data().displayName||'').toLowerCase()===name.toLowerCase());
+      if(taken){
+        st.textContent='✗ Already taken';st.style.color='#d32f2f';
+        if(saveBtn)saveBtn.disabled=true;
+      } else {
+        st.textContent='✓ Available!';st.style.color='#2e7d32';
+        if(saveBtn)saveBtn.disabled=false;
+      }
+    }).catch(()=>{st.textContent='Could not check';st.style.color='var(--md)';if(saveBtn)saveBtn.disabled=false;});
+  },500);
 }
 function uploadProfilePic(e){
   var file=e.target.files[0];if(!file)return;
@@ -1573,9 +1637,54 @@ function doSignup(){
   var err=document.getElementById('signup-err');err.style.display='none';
   if(!name||!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
   if(pw.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
-  _auth.createUserWithEmailAndPassword(email,pw).then(uc=>{
-    return _db.collection('users').doc(uc.user.uid).set({displayName:name,joined:firebase.firestore.FieldValue.serverTimestamp(),photo:'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',bio:'',website:'',reviewCount:0,commentCount:0,badges:[]});
-  }).catch(e=>{err.textContent=e.message;err.style.display='block';});
+  // Check for duplicate username (case-insensitive)
+  var btn=document.querySelector('#signup-view .btn-submit');
+  if(btn){btn.disabled=true;btn.textContent='Checking...';}
+  _db.collection('users').where('displayNameLower','==',name.toLowerCase()).get().then(snap=>{
+    if(!snap.empty){
+      err.textContent='That username is already taken. Please choose another.';err.style.display='block';
+      if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+      return;
+    }
+    _auth.createUserWithEmailAndPassword(email,pw).then(uc=>{
+      return _db.collection('users').doc(uc.user.uid).set({
+        displayName:name,
+        displayNameLower:name.toLowerCase(),
+        joined:firebase.firestore.FieldValue.serverTimestamp(),
+        photo:'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
+        bio:'',website:'',reviewCount:0,commentCount:0,badges:[]
+      });
+    }).then(()=>{
+      if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+    }).catch(e=>{
+      err.textContent=e.message;err.style.display='block';
+      if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+    });
+  }).catch(e=>{
+    // If index not ready, fall back to full scan
+    _db.collection('users').get().then(allSnap=>{
+      var taken=allSnap.docs.some(d=>(d.data().displayName||'').toLowerCase()===name.toLowerCase());
+      if(taken){
+        err.textContent='That username is already taken. Please choose another.';err.style.display='block';
+        if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+        return;
+      }
+      _auth.createUserWithEmailAndPassword(email,pw).then(uc=>{
+        return _db.collection('users').doc(uc.user.uid).set({
+          displayName:name,
+          displayNameLower:name.toLowerCase(),
+          joined:firebase.firestore.FieldValue.serverTimestamp(),
+          photo:'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
+          bio:'',website:'',reviewCount:0,commentCount:0,badges:[]
+        });
+      }).then(()=>{
+        if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+      }).catch(e2=>{
+        err.textContent=e2.message;err.style.display='block';
+        if(btn){btn.disabled=false;btn.textContent='Join LPsun';}
+      });
+    });
+  });
 }
 function doLogout(){_auth.signOut();closeDrawer();navTo('home');}
 
