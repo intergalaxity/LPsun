@@ -79,7 +79,6 @@ _auth.onAuthStateChanged(syncAuthUI);
 window.addEventListener('DOMContentLoaded',function(){
   syncAuthUI(_auth.currentUser);
 });
-window.addEventListener('hashchange',routeHash);
 </script>
 <style>
 :root{--p:#EF6C00;--bg:#F5F5F5;--s2:0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.12),0 1px 5px 0 rgba(0,0,0,.2);--s4:0 4px 5px 0 rgba(0,0,0,.14),0 1px 10px 0 rgba(0,0,0,.12),0 2px 4px -1px rgba(0,0,0,.3);--dk:rgba(0,0,0,.87);--md:rgba(0,0,0,.54);--dv:rgba(0,0,0,.12)}
@@ -728,17 +727,11 @@ var _savedRange=null, _activeEditorId='editor';
 
 // ── Hash routing ────────────────────────────────────────────────────────────
 function navTo(path){
-  window.location.hash='#'+path;
-}
-function routeHash(){
-  var hash=window.location.hash.replace(/^#/,'')||'home';
-  var parts=hash.split('/');
+  var parts=path.split('/');
   var page=parts[0];
   closeNotifPanel();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  // Map page names to view IDs (handles dashes in IDs)
-  var viewId=page+'-view';
-  var vEl=document.getElementById(viewId);
+  var vEl=document.getElementById(page+'-view');
   if(vEl){vEl.classList.add('active');window.scrollTo(0,0);}
   else{document.getElementById('home-view').classList.add('active');page='home';}
   if(page==='home')loadHomeReviews();
@@ -752,7 +745,7 @@ function routeHash(){
   else if(page==='new-news'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('news');}
   else if(page==='notifications')loadAllNotifications();
   else if(page==='admin'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('home');}
-  else if(page==='new-review'){if(!_currentUser)navTo('login');}
+  else if(page==='new-review'){if(!_currentUser){navTo('login');}}
 }
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
@@ -854,7 +847,7 @@ function performSearchRender(q){
 }
 function setSearchTab(tab){
   currentSearchTab=tab;
-  var q=si.value.trim()||decodeURIComponent((window.location.hash.split('/')[1]||''));
+  var q=si.value.trim();
   document.querySelectorAll('#search-view .tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   renderSearchResults(q);
@@ -1201,11 +1194,7 @@ function expandReviews(btn,section,ids){
   });
 }
 window.addEventListener('DOMContentLoaded',function(){
-  // All functions are now defined — safe to route
-  routeHash();
-  // Also reload home reviews when hash is empty or home
-  var h=window.location.hash||'#home';
-  if(h==='#home'||h==='')loadHomeReviews();
+  loadHomeReviews();
 });
 
 // ── Profile ──────────────────────────────────────────────────────────────────
