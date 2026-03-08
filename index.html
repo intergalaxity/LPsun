@@ -401,10 +401,7 @@ header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
 .admin-search-input{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;background:transparent;color:var(--dk)}
 .admin-search-input:focus{border-bottom-color:var(--p)}
 .asu-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
-/* Follow button */
-.follow-bar{display:block;width:100%;margin-bottom:12px;padding:10px 16px;border-radius:4px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;font-family:'Roboto',sans-serif;transition:all .2s;border:none;box-shadow:var(--s2)}
-.follow-bar.not-following{background:var(--p);color:#fff}.follow-bar.not-following:hover{filter:brightness(1.1)}
-.follow-bar.following{background:#9e9e9e;color:#fff}.follow-bar.following:hover{filter:brightness(.95)}
+/* Staff buttons */
 .staff-btn{font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border:none;transition:all .15s}
 .sb-rotd{background:#fff3e0;color:var(--p)}.sb-rotd:hover{background:#ffe0b2}
 .sb-edit{background:#e8f5e9;color:#2e7d32}.sb-edit:hover{background:#c8e6c9}
@@ -470,7 +467,6 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <div class="drawer-divider"></div>
     <div id="drawer-logged-in-only" style="display:none">
       <div class="drawer-item" onclick="navTo('profile/'+_currentUser.uid);closeDrawer()"><i class="material-icons">person</i>My Profile</div>
-      <div class="drawer-item" onclick="navTo('following');closeDrawer()"><i class="material-icons">people</i>Following</div>
       <div class="drawer-item" onclick="navTo('notifications');closeDrawer()"><i class="material-icons">notifications</i>All Notifications</div>
       <div id="drawer-admin-item" style="display:none"><div class="drawer-item" onclick="navTo('admin');closeDrawer()"><i class="material-icons" style="color:var(--p)">admin_panel_settings</i><span style="color:var(--p)">Admin Panel</span></div></div>
       <div class="drawer-item" onclick="doLogout()"><i class="material-icons">exit_to_app</i>Log Out</div>
@@ -542,7 +538,6 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <div class="rsec"><p class="slbl">Release Information</p>
       <div class="fr"><div class="fld"><label>Artist / Band</label><input type="text" id="r-artist" placeholder="e.g. Radiohead"></div><div class="fld"><label>Album / Release Title</label><input type="text" id="r-work" placeholder="e.g. In Rainbows"></div></div>
       <div style="margin-top:24px"><div class="fld"><label>Type of Release</label><select id="r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Release Date</label><input type="date" id="r-release-date"></div></div>
     </div>
     <div class="rsec"><p class="slbl">Your Rating</p><div class="sw"><div class="stars"><input type="radio" name="rating" id="s5" value="5"><label for="s5">&#9733;</label><input type="radio" name="rating" id="s4" value="4"><label for="s4">&#9733;</label><input type="radio" name="rating" id="s3" value="3"><label for="s3">&#9733;</label><input type="radio" name="rating" id="s2" value="2"><label for="s2">&#9733;</label><input type="radio" name="rating" id="s1" value="1"><label for="s1">&#9733;</label></div><span class="slb" id="star-lbl">Click to rate</span></div></div>
     <div class="rsec"><p class="slbl">Cover Art</p>
@@ -581,7 +576,6 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <div class="rsec"><p class="slbl">Release Information</p>
       <div class="fr"><div class="fld"><label>Artist / Band</label><input type="text" id="edit-r-artist"></div><div class="fld"><label>Release Title</label><input type="text" id="edit-r-work"></div></div>
       <div style="margin-top:24px"><div class="fld"><label>Type</label><select id="edit-r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Release Date</label><input type="date" id="edit-r-release-date"></div></div>
     </div>
     <div class="rsec"><p class="slbl">Rating</p><div class="sw"><div class="stars"><input type="radio" name="edit-rating" id="es5" value="5"><label for="es5">&#9733;</label><input type="radio" name="edit-rating" id="es4" value="4"><label for="es4">&#9733;</label><input type="radio" name="edit-rating" id="es3" value="3"><label for="es3">&#9733;</label><input type="radio" name="edit-rating" id="es2" value="2"><label for="es2">&#9733;</label><input type="radio" name="edit-rating" id="es1" value="1"><label for="es1">&#9733;</label></div><span class="slb" id="edit-star-lbl">Click to rate</span></div></div>
     <div class="rsec"><p class="slbl">Cover Art</p><div class="covs"><div class="covp" id="edit-covp"><img id="edit-covImg" src="" alt="Cover" style="display:none"><div class="covph" id="edit-covPH"><i class="material-icons">album</i><span>Preview</span></div></div><div class="covin"><div class="fld"><label>Image URL</label><input type="url" id="edit-r-cover-url" placeholder="https://..."></div><div class="cor">OR</div><input type="file" id="edit-cfile" accept="image/*" style="display:none"><button class="bup" onclick="document.getElementById('edit-cfile').click()"><i class="material-icons">cloud_upload</i>Upload</button></div></div></div>
@@ -626,7 +620,6 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
       <div id="p-badges-row" style="margin-bottom:8px;line-height:2"></div>
       <div class="profile-bio" id="p-bio">No bio provided.</div>
       <button class="profile-edit-btn" id="p-edit-btn" style="display:none" onclick="openEditProfile()">Edit Profile</button>
-      <button class="follow-bar not-following" id="p-follow-btn" style="display:none" onclick="toggleFollow()">+ Follow</button>
       <div class="profile-meta" id="p-joined"><i class="material-icons">calendar_today</i>&nbsp;Joined</div>
       <a href="#" target="_blank" class="profile-web" id="p-web" style="display:none"><i class="material-icons">link</i><span id="p-web-text"></span></a>
       <div class="profile-stats">
@@ -646,12 +639,6 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
       <div id="profile-content"></div>
     </div>
   </div>
-</div>
-
-<!-- Following Page -->
-<div id="following-view" class="view">
-  <div class="rph"><h2><b>Following</b></h2><p>Users you follow. You'll be notified when they post a review.</p></div>
-  <div class="notif-full-wrap" id="following-list"></div>
 </div>
 
 <!-- All Notifications -->
@@ -759,7 +746,6 @@ function navTo(path){
   else if(page==='news')loadNews();
   else if(page==='new-news'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('news');}
   else if(page==='notifications')loadAllNotifications();
-  else if(page==='following')loadFollowingPage();
   else if(page==='admin'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('home');}
   else if(page==='new-review'){if(!_currentUser){navTo('login');}}
 }
@@ -1003,7 +989,7 @@ function showReviewDetail(reviewId){
           +'<div class="rv-artist" onclick="navTo(\'artist/'+encodeURIComponent(r.artist||'')+'\')">'+esc2(r.artist||'')+'</div>'
           +'<div class="rv-stars">'+stars+'</div>'
           +'<div class="rv-byline">Review by <span class="rv-author" onclick="navTo(\'profile/'+r.authorId+'\')">'+esc2(r.authorName||'Unknown')+ver+'</span></div>'
-          +'<div class="rv-date">'+dateStr+(r.type?' · '+r.type:'')+(r.releaseDate?' · Released: '+r.releaseDate:'')+'</div>'
+          +'<div class="rv-date">'+dateStr+(r.type?' · '+r.type:'')+'</div>'
         +'</div>'
       +'</div>'
       +staffBar
@@ -1205,50 +1191,13 @@ function starsHtml(r){var s='';for(var i=1;i<=5;i++)s+=i<=r?'★':'<span class="
 
 function homeCardHtml(doc){
   var r=doc.data(),id=doc.id;
-  var sv=isStaff(r.authorId)||r.authorIsStaff||r.authorVerified;
+  var sv=isStaff(r.authorId)||r.authorIsStaff;
   var ver=sv?'<i class="material-icons" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>':'';
   // cover fills full height via absolute positioning
   var cover=r.coverUrl
     ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
     :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
-}
-
-var _homeRestDocs={newest:[],staff:[]};
-
-// Cache of uid -> verified status to avoid repeated lookups
-var _verifiedCache={};
-function getVerifiedStatus(uid,callback){
-  if(_verifiedCache[uid]!==undefined){callback(_verifiedCache[uid]);return;}
-  _db.collection('users').doc(uid).get().then(doc=>{
-    var v=doc.exists&&(doc.data().verified||doc.data().isStaff||isStaff(uid,doc.data()))||false;
-    _verifiedCache[uid]=v;
-    callback(v);
-  }).catch(()=>{_verifiedCache[uid]=false;callback(false);});
-}
-
-function applyVerifiedTicks(docs){
-  docs.forEach(doc=>{
-    var r=doc.data(),id=doc.id;
-    if(!r.authorId)return;
-    getVerifiedStatus(r.authorId,function(verified){
-      if(!verified)return;
-      var card=document.querySelector('.home-review-card[data-id="'+id+'"] .hrc-ver');
-      if(card)card.style.display='inline';
-    });
-  });
-}
-
-function homeCardHtml(doc){
-  var r=doc.data(),id=doc.id;
-  // Start hidden; applyVerifiedTicks does a live user lookup and shows it if verified
-  var ver='<i class="material-icons hrc-ver" style="color:var(--p);font-size:11px;vertical-align:middle;display:none">verified</i>';
-  // Show immediately if flag already stored on review doc
-  if(r.authorVerified||r.authorIsStaff)ver='<i class="material-icons hrc-ver" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>';
-  var cover=r.coverUrl
-    ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
-    :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
+  return `<div class="home-review-card" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
 }
 
 function loadHomeReviews(){
@@ -1261,37 +1210,27 @@ function loadHomeReviews(){
   _db.collection('reviews').orderBy('createdAt','desc').get().then(snap=>{
     if(snap.empty){newestEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No reviews yet.</div>';return;}
     var all=snap.docs,first3=all.slice(0,3),rest=all.slice(3);
-    _homeRestDocs.newest=rest;
     var inner=first3.map(d=>homeCardHtml(d)).join('');
-    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'newest')">Show ${rest.length} more ▾</div>`;
+    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'newest',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
     newestEl.innerHTML=inner;
-    applyVerifiedTicks(first3);
   }).catch(e=>{newestEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No reviews yet.</div>';});
   _db.collection('reviews').where('authorId','==',OWNER_UID).get().then(snap=>{
     if(snap.empty){staffEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No staff reviews yet.</div>';return;}
     var docs=snap.docs.sort((a,b)=>{var ta=a.data().createdAt?a.data().createdAt.toMillis():0,tb=b.data().createdAt?b.data().createdAt.toMillis():0;return tb-ta;});
     var first3=docs.slice(0,3),rest=docs.slice(3);
-    _homeRestDocs.staff=rest;
     var inner=first3.map(d=>homeCardHtml(d)).join('');
-    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'staff')">Show ${rest.length} more ▾</div>`;
+    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'staff',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
     staffEl.innerHTML=inner;
-    applyVerifiedTicks(first3);
   }).catch(()=>{staffEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No staff reviews yet.</div>';});
 }
 
-function expandReviews(btn,section){
+function expandReviews(btn,section,ids){
   var container=document.getElementById(section+'-reviews-container');
-  var rest=_homeRestDocs[section]||[];
   btn.remove();
-  rest.forEach(doc=>{
-    if(doc.exists!==false){
-      var div=document.createElement('div');
-      div.innerHTML=homeCardHtml(doc);
-      container.appendChild(div.firstChild);
-    }
+  if(!ids.length)return;
+  Promise.all(ids.map(id=>_db.collection('reviews').doc(id).get())).then(docs=>{
+    docs.forEach(doc=>{if(doc.exists){var div=document.createElement('div');div.innerHTML=homeCardHtml(doc);container.appendChild(div.firstChild);}});
   });
-  applyVerifiedTicks(rest);
-  _homeRestDocs[section]=[];
 }
 // Load home on startup
 loadHomeReviews();
@@ -1330,55 +1269,8 @@ function showProfile(uid){
     var isMe=_currentUser&&_currentUser.uid===uid;
     document.getElementById('p-edit-btn').style.display=isMe?'block':'none';
     document.getElementById('p-photo-overlay').style.display=isMe?'flex':'none';
-    // Follow button
-    var followBtn=document.getElementById('p-follow-btn');
-    if(!isMe&&_currentUser){
-      followBtn.style.display='block';
-      _db.collection('users').doc(_currentUser.uid).collection('following').doc(uid).get().then(fd=>{
-        if(fd.exists){followBtn.className='follow-bar following';followBtn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';}
-        else{followBtn.className='follow-bar not-following';followBtn.innerHTML='+ Follow';}
-      });
-    } else {followBtn.style.display='none';}
     renderProfileContent();
   });
-}
-
-function toggleFollow(){
-  if(!_currentUser){navTo('login');return;}
-  var uid=profileViewId;if(!uid||uid===_currentUser.uid)return;
-  var followRef=_db.collection('users').doc(_currentUser.uid).collection('following').doc(uid);
-  var btn=document.getElementById('p-follow-btn');
-  followRef.get().then(fd=>{
-    if(fd.exists){
-      followRef.delete().then(()=>{btn.className='follow-bar not-following';btn.innerHTML='+ Follow';toast('Unfollowed.');});
-    } else {
-      _db.collection('users').doc(uid).get().then(ud=>{
-        var name=ud.exists?(ud.data().displayName||'Unknown'):'Unknown';
-        followRef.set({displayName:name,followedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-          btn.className='follow-bar following';btn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';
-          toast('Following '+name+'!');
-          var myName=(_userData&&_userData.displayName)||'Someone';
-          sendNotification(uid,'info',myName+' started following you.',null);
-        });
-      });
-    }
-  });
-}
-
-function loadFollowingPage(){
-  if(!_currentUser){navTo('login');return;}
-  var wrap=document.getElementById('following-list');
-  wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  _db.collection('users').doc(_currentUser.uid).collection('following').get().then(snap=>{
-    if(snap.empty){wrap.innerHTML='<div style="padding:60px;text-align:center;color:var(--md);font-size:15px">You\'re not following anyone yet. Visit a user\'s profile to follow them!</div>';return;}
-    var html='<div class="search-results-box">';
-    snap.docs.forEach(doc=>{
-      var d=doc.data();
-      html+=`<div class="search-result-item" onclick="navTo('profile/${doc.id}')"><div class="search-result-cover-ph" style="border-radius:50%"><i class="material-icons">person</i></div><div class="search-result-main"><div class="search-result-title">${d.displayName||'Unknown'}</div></div><i class="material-icons" style="color:var(--md)">chevron_right</i></div>`;
-    });
-    html+='</div>';
-    wrap.innerHTML=html;
-  }).catch(()=>{wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load following list.</div>';});
 }
 
 function removeBadge(uid,idx){
@@ -1470,7 +1362,6 @@ function saveProfile(){
   var bio=document.getElementById('edit-p-bio').value.trim();
   var website=document.getElementById('edit-p-web').value.trim();
   if(!newName){toast('Username cannot be empty.');return;}
-  if(!validateUsername(newName)){toast('Username can only contain letters, numbers, hyphens (-), underscores (_), and dots (.). No spaces.');return;}
   var saveBtn=document.getElementById('save-profile-btn');
   var oldName=(_userData&&_userData.displayName)||'';
   // If name hasn't changed, skip uniqueness check
@@ -1512,7 +1403,6 @@ function checkUsernameAvailability(val){
   var name=val.trim();
   var currentName=(_userData&&_userData.displayName)||'';
   if(!name){st.textContent='';if(saveBtn)saveBtn.disabled=false;return;}
-  if(!validateUsername(name)){st.textContent='✗ Only letters, numbers, -, _, . allowed (no spaces)';st.style.color='#d32f2f';if(saveBtn)saveBtn.disabled=true;return;}
   // Same as current name — always available
   if(name.toLowerCase()===currentName.toLowerCase()){
     st.textContent='✓ Your current username';st.style.color='#2e7d32';
@@ -1545,19 +1435,13 @@ function uploadProfilePic(e){
 var _editPendingB64=null;
 function fmtE(cmd,val){document.getElementById('edit-editor').focus();document.execCommand(cmd,false,val||null);}
 function openEditReview(id){
-  if(!_currentUser){navTo('login');return;}
   _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists){toast('Review not found.');navTo('home');return;}
+    if(!doc.exists)return;
     var r=doc.data();
-    // Permission check: must be author or staff
-    if(r.authorId!==_currentUser.uid&&!isStaff(_currentUser.uid,_userData)){
-      toast('You can only edit your own reviews.');navTo('review/'+id);return;
-    }
     document.getElementById('edit-review-id').value=id;
     document.getElementById('edit-r-artist').value=r.artist||'';
     document.getElementById('edit-r-work').value=r.work||'';
     document.getElementById('edit-r-type').value=r.type||'';
-    document.getElementById('edit-r-release-date').value=r.releaseDate||'';
     document.getElementById('edit-editor').innerHTML=r.body||'';
     _editPendingB64=null;
     document.querySelectorAll('input[name="edit-rating"]').forEach(el=>el.checked=false);
@@ -1571,27 +1455,12 @@ document.getElementById('edit-cfile').addEventListener('change',function(){var f
 document.querySelectorAll('input[name="edit-rating"]').forEach(r=>{r.addEventListener('change',()=>{var sl=['','Terrible','Poor','Decent','Great','Essential'];document.getElementById('edit-star-lbl').textContent=sl[r.value]+' ('+r.value+'/5)';});});
 
 function saveReviewEdit(){
-  if(!_currentUser){toast('You must be logged in to edit.');return;}
   var id=document.getElementById('edit-review-id').value;
-  if(!id){toast('No review ID found.');return;}
   var artist=document.getElementById('edit-r-artist').value.trim(),work=document.getElementById('edit-r-work').value.trim(),type=document.getElementById('edit-r-type').value;
   var rEl=document.querySelector('input[name="edit-rating"]:checked'),body=document.getElementById('edit-editor').innerHTML.trim();
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_editPendingB64||document.getElementById('edit-r-cover-url').value.trim()||null;
-  var releaseDate=document.getElementById('edit-r-release-date').value||null;
-  // Verify the current user owns this review OR is staff before updating
-  _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists){toast('Review not found.');return;}
-    var isOwner=doc.data().authorId===_currentUser.uid;
-    var isStaffUser=isStaff(_currentUser.uid,_userData);
-    if(!isOwner&&!isStaffUser){toast('You do not have permission to edit this review.');return;}
-    return _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate});
-  }).then(res=>{
-    if(res!==undefined){toast('Review updated! ✓');navTo('review/'+id);}
-  }).catch(e=>{
-    console.error('saveReviewEdit error:',e);
-    toast('Error saving: '+e.message);
-  });
+  _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover}).then(()=>{toast('Review updated! ✓');navTo('review/'+id);}).catch(e=>toast('Error: '+e.message));
 }
 function deleteReview(id){
   if(!confirm('Delete this review? Cannot be undone.'))return;
@@ -1616,25 +1485,10 @@ function submitReview(){
   var rEl=document.querySelector('input[name="rating"]:checked'),body=document.getElementById('editor').innerHTML.trim();
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_pendingB64||document.getElementById('r-cover-url').value.trim()||null;
-  var releaseDate=document.getElementById('r-release-date').value||null;
-  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,authorVerified:(_userData&&(_userData.verified||_userData.isStaff||isStaff(_currentUser.uid,_userData)))||false,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
+  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
     _db.collection('users').doc(_currentUser.uid).update({reviewCount:firebase.firestore.FieldValue.increment(1)});
-    // Notify followers
-    var authorName=(_userData&&_userData.displayName)||'Someone';
-    _db.collection('users').doc(_currentUser.uid).collection('followers').get().then(fSnap=>{
-      fSnap.docs.forEach(fd=>{sendNotification(fd.id,'info',authorName+' posted a new review: '+work,newDoc.id);});
-    }).catch(()=>{});
-    // Also notify via reverse index: find who follows this user
-    _db.collection('users').get().then(allSnap=>{
-      allSnap.docs.forEach(ud=>{
-        if(ud.id===_currentUser.uid)return;
-        _db.collection('users').doc(ud.id).collection('following').doc(_currentUser.uid).get().then(fd=>{
-          if(fd.exists)sendNotification(ud.id,'info',authorName+' posted a new review: '+work,newDoc.id);
-        }).catch(()=>{});
-      });
-    }).catch(()=>{});
     toast('Review published! ✓');
-    document.getElementById('r-artist').value='';document.getElementById('r-work').value='';document.getElementById('r-type').value='';document.getElementById('r-release-date').value='';
+    document.getElementById('r-artist').value='';document.getElementById('r-work').value='';document.getElementById('r-type').value='';
     var rc=document.querySelector('input[name="rating"]:checked');if(rc)rc.checked=false;
     document.getElementById('editor').innerHTML='';document.getElementById('covImg').style.display='none';document.getElementById('covPH').style.display='flex';_pendingB64=null;document.getElementById('star-lbl').textContent='Click to rate';
     navTo('review/'+newDoc.id);
@@ -1669,8 +1523,8 @@ function renderNewsMain(doc){
   var p=doc.data(),id=doc.id;
   var ds=p.createdAt?new Date(p.createdAt.toMillis()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
   var staffBtns=(_currentUser&&isStaff(_currentUser.uid,_userData))
-    ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-edit" onclick="openEditNewsPost('${id}',this)"><i class="material-icons" style="font-size:14px">edit</i>Edit</button><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
-  mainCol.innerHTML=`<div class="news-featured-post" id="news-post-${id}">
+    ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
+  mainCol.innerHTML=`<div class="news-featured-post">
     <div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div>
     <div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
 }
@@ -1681,10 +1535,10 @@ function showNewsPost(id){
     var p=doc.data();
     var ds=p.createdAt?new Date(p.createdAt.toMillis()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
     var staffBtns=(_currentUser&&isStaff(_currentUser.uid,_userData))
-      ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-edit" onclick="openEditNewsPost('${id}',this)"><i class="material-icons" style="font-size:14px">edit</i>Edit</button><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
+      ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
     var mainCol=document.getElementById('news-main-col');
     mainCol.innerHTML=`<div style="margin-bottom:12px"><button onclick="loadNews()" style="background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:0"><i class="material-icons" style="font-size:16px">arrow_back</i>Back to News</button></div>
-      <div class="news-featured-post" id="news-post-${id}"><div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div><div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
+      <div class="news-featured-post"><div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div><div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
   });
 }
 
@@ -1700,34 +1554,6 @@ function publishNews(){
 function deleteNewsPost(id){
   if(!confirm('Delete this post?'))return;
   _db.collection('news').doc(id).delete().then(()=>{toast('Post deleted.');loadNews();}).catch(e=>toast('Error: '+e.message));
-}
-function openEditNewsPost(id,btn){
-  _db.collection('news').doc(id).get().then(doc=>{
-    if(!doc.exists)return;
-    var p=doc.data();
-    var mainCol=document.getElementById('news-main-col');
-    var backBtn=document.getElementById('news-back-btn')?'':'';//may exist
-    mainCol.innerHTML=`
-      <div style="margin-bottom:12px"><button onclick="showNewsPost('${id}')" style="background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:0"><i class="material-icons" style="font-size:16px">arrow_back</i>Cancel Edit</button></div>
-      <div class="rcard" style="border-radius:2px">
-        <div class="rsec"><p class="slbl">Post Title</p><div class="fld"><input type="text" id="edit-news-title" value="${(p.title||'').replace(/"/g,'&quot;')}"></div></div>
-        <div class="rsec"><p class="slbl">Content</p>
-          <div class="tbar">
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('bold',false,null)"><b>B</b></button>
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('italic',false,null)"><i>I</i></button>
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('underline',false,null)"><u>U</u></button>
-          </div>
-          <div class="editor" id="edit-news-editor" contenteditable="true" style="min-height:200px">${p.body||''}</div>
-        </div>
-        <div class="subbar"><button class="bdis" onclick="showNewsPost('${id}')">Cancel</button><button class="bpub" onclick="saveNewsEdit('${id}')"><i class="material-icons">save</i>Save Changes</button></div>
-      </div>`;
-  });
-}
-function saveNewsEdit(id){
-  var title=document.getElementById('edit-news-title').value.trim();
-  var body=document.getElementById('edit-news-editor').innerHTML.trim();
-  if(!title){toast('Add a title.');return;}if(!body){toast('Write some content.');return;}
-  _db.collection('news').doc(id).update({title,body}).then(()=>{toast('Post updated! ✓');showNewsPost(id);}).catch(e=>toast('Error: '+e.message));
 }
 
 // ── Admin Panel ───────────────────────────────────────────────────────────────
@@ -1833,13 +1659,10 @@ function doLogin(){
   if(!email||!pw){err.textContent='Please enter your email and password.';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(e=>{err.textContent='Invalid email or password.';err.style.display='block';});
 }
-var _validUsernameRe=/^[a-zA-Z0-9\-_.]+$/;
-function validateUsername(name){return _validUsernameRe.test(name);}
 function doSignup(){
   var name=document.getElementById('signup-name').value.trim(),email=document.getElementById('signup-email').value.trim(),pw=document.getElementById('signup-pw').value;
   var err=document.getElementById('signup-err');err.style.display='none';
   if(!name||!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
-  if(!validateUsername(name)){err.textContent='Username can only contain letters, numbers, hyphens (-), underscores (_), and dots (.). No spaces.';err.style.display='block';return;}
   if(pw.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
   // Check for duplicate username (case-insensitive)
   var btn=document.querySelector('#signup-view .btn-submit');
