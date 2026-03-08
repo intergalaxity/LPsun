@@ -1300,7 +1300,7 @@ function expandReviews(btn,section){
       container.appendChild(div.firstChild);
     }
   });
-  applyVerifiedTicks(rest);
+  setTimeout(function(){applyVerifiedTicks(rest);},50);
   _homeRestDocs[section]=[];
 }
 // Load home on startup
