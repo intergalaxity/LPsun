@@ -907,9 +907,10 @@ function renderSearchResults(q){
       var users=snap.docs.filter(doc=>(doc.data().displayName||'').toLowerCase().includes(ql));
       if(!users.length){container.innerHTML=`<div class="search-empty">No users found for <b>"${q}"</b></div>`;return;}
       container.innerHTML='<div class="search-results-box">'+users.map(doc=>{
-        var d=doc.data();
+        var d=doc.data(),sv=isStaff(doc.id,d)||d.verified;
+        var vIcon=sv?'<i class="material-icons" style="color:var(--p);font-size:14px;vertical-align:middle;margin-left:4px">verified</i>':'';
         var av=d.photo?`<img class="search-result-avatar" src="${d.photo}">`:`<div class="search-result-cover-ph" style="border-radius:50%"><i class="material-icons">person</i></div>`;
-        return `<div class="search-result-item" onclick="navTo('profile/${doc.id}')">${av}<div class="search-result-main"><div class="search-result-title">${d.displayName||'Unknown'}</div><div class="search-result-sub">${d.reviewCount||0} reviews</div></div><i class="material-icons" style="color:var(--md)">chevron_right</i></div>`;
+        return `<div class="search-result-item" onclick="navTo('profile/${doc.id}')">${av}<div class="search-result-main"><div class="search-result-title">${d.displayName||'Unknown'}${vIcon}</div><div class="search-result-sub">${d.reviewCount||0} reviews</div></div><i class="material-icons" style="color:var(--md)">chevron_right</i></div>`;
       }).join('')+'</div>';
     });
   }
@@ -1204,11 +1205,13 @@ function starsHtml(r){var s='';for(var i=1;i<=5;i++)s+=i<=r?'★':'<span class="
 
 function homeCardHtml(doc){
   var r=doc.data(),id=doc.id;
+  var sv=isStaff(r.authorId)||r.authorIsStaff||r.authorVerified;
+  var ver=sv?'<i class="material-icons" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>':'';
   // cover fills full height via absolute positioning
   var cover=r.coverUrl
     ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
     :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong></div></div></div>`;
+  return `<div class="home-review-card" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
 }
 
 var _homeRestDocs={newest:[],staff:[]};
@@ -1313,7 +1316,10 @@ function toggleFollow(){
       _db.collection('users').doc(uid).get().then(ud=>{
         var name=ud.exists?(ud.data().displayName||'Unknown'):'Unknown';
         followRef.set({displayName:name,followedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-          btn.className='follow-bar following';btn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';toast('Following '+name+'!');
+          btn.className='follow-bar following';btn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';
+          toast('Following '+name+'!');
+          var myName=(_userData&&_userData.displayName)||'Someone';
+          sendNotification(uid,'info',myName+' started following you.',null);
         });
       });
     }
@@ -1553,7 +1559,7 @@ function submitReview(){
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_pendingB64||document.getElementById('r-cover-url').value.trim()||null;
   var releaseDate=document.getElementById('r-release-date').value||null;
-  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
+  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,authorVerified:(_userData&&(_userData.verified||_userData.isStaff||isStaff(_currentUser.uid,_userData)))||false,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
     _db.collection('users').doc(_currentUser.uid).update({reviewCount:firebase.firestore.FieldValue.increment(1)});
     // Notify followers
     var authorName=(_userData&&_userData.displayName)||'Someone';
