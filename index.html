@@ -1211,10 +1211,46 @@ function homeCardHtml(doc){
   var cover=r.coverUrl
     ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
     :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
+  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
 }
 
 var _homeRestDocs={newest:[],staff:[]};
+
+// Cache of uid -> verified status to avoid repeated lookups
+var _verifiedCache={};
+function getVerifiedStatus(uid,callback){
+  if(_verifiedCache[uid]!==undefined){callback(_verifiedCache[uid]);return;}
+  _db.collection('users').doc(uid).get().then(doc=>{
+    var v=doc.exists&&(doc.data().verified||doc.data().isStaff||isStaff(uid,doc.data()))||false;
+    _verifiedCache[uid]=v;
+    callback(v);
+  }).catch(()=>{_verifiedCache[uid]=false;callback(false);});
+}
+
+function applyVerifiedTicks(docs){
+  docs.forEach(doc=>{
+    var r=doc.data(),id=doc.id;
+    if(!r.authorId)return;
+    getVerifiedStatus(r.authorId,function(verified){
+      if(!verified)return;
+      var card=document.querySelector('.home-review-card[data-id="'+id+'"] .hrc-ver');
+      if(card)card.style.display='inline';
+    });
+  });
+}
+
+function homeCardHtml(doc){
+  var r=doc.data(),id=doc.id;
+  // Start hidden; applyVerifiedTicks does a live user lookup and shows it if verified
+  var ver='<i class="material-icons hrc-ver" style="color:var(--p);font-size:11px;vertical-align:middle;display:none">verified</i>';
+  // Show immediately if flag already stored on review doc
+  if(r.authorVerified||r.authorIsStaff)ver='<i class="material-icons hrc-ver" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>';
+  var cover=r.coverUrl
+    ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
+    :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
+  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
+}
+
 function loadHomeReviews(){
   loadRotd();
   var newestEl=document.getElementById('newest-reviews-container');
@@ -1229,6 +1265,7 @@ function loadHomeReviews(){
     var inner=first3.map(d=>homeCardHtml(d)).join('');
     if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'newest')">Show ${rest.length} more ▾</div>`;
     newestEl.innerHTML=inner;
+    applyVerifiedTicks(first3);
   }).catch(e=>{newestEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No reviews yet.</div>';});
   _db.collection('reviews').where('authorId','==',OWNER_UID).get().then(snap=>{
     if(snap.empty){staffEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No staff reviews yet.</div>';return;}
@@ -1238,6 +1275,7 @@ function loadHomeReviews(){
     var inner=first3.map(d=>homeCardHtml(d)).join('');
     if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'staff')">Show ${rest.length} more ▾</div>`;
     staffEl.innerHTML=inner;
+    applyVerifiedTicks(first3);
   }).catch(()=>{staffEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No staff reviews yet.</div>';});
 }
 
@@ -1252,6 +1290,7 @@ function expandReviews(btn,section){
       container.appendChild(div.firstChild);
     }
   });
+  applyVerifiedTicks(rest);
   _homeRestDocs[section]=[];
 }
 // Load home on startup
@@ -1506,9 +1545,14 @@ function uploadProfilePic(e){
 var _editPendingB64=null;
 function fmtE(cmd,val){document.getElementById('edit-editor').focus();document.execCommand(cmd,false,val||null);}
 function openEditReview(id){
+  if(!_currentUser){navTo('login');return;}
   _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists)return;
+    if(!doc.exists){toast('Review not found.');navTo('home');return;}
     var r=doc.data();
+    // Permission check: must be author or staff
+    if(r.authorId!==_currentUser.uid&&!isStaff(_currentUser.uid,_userData)){
+      toast('You can only edit your own reviews.');navTo('review/'+id);return;
+    }
     document.getElementById('edit-review-id').value=id;
     document.getElementById('edit-r-artist').value=r.artist||'';
     document.getElementById('edit-r-work').value=r.work||'';
@@ -1527,13 +1571,27 @@ document.getElementById('edit-cfile').addEventListener('change',function(){var f
 document.querySelectorAll('input[name="edit-rating"]').forEach(r=>{r.addEventListener('change',()=>{var sl=['','Terrible','Poor','Decent','Great','Essential'];document.getElementById('edit-star-lbl').textContent=sl[r.value]+' ('+r.value+'/5)';});});
 
 function saveReviewEdit(){
+  if(!_currentUser){toast('You must be logged in to edit.');return;}
   var id=document.getElementById('edit-review-id').value;
+  if(!id){toast('No review ID found.');return;}
   var artist=document.getElementById('edit-r-artist').value.trim(),work=document.getElementById('edit-r-work').value.trim(),type=document.getElementById('edit-r-type').value;
   var rEl=document.querySelector('input[name="edit-rating"]:checked'),body=document.getElementById('edit-editor').innerHTML.trim();
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_editPendingB64||document.getElementById('edit-r-cover-url').value.trim()||null;
   var releaseDate=document.getElementById('edit-r-release-date').value||null;
-  _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate}).then(()=>{toast('Review updated! ✓');navTo('review/'+id);}).catch(e=>toast('Error: '+e.message));
+  // Verify the current user owns this review OR is staff before updating
+  _db.collection('reviews').doc(id).get().then(doc=>{
+    if(!doc.exists){toast('Review not found.');return;}
+    var isOwner=doc.data().authorId===_currentUser.uid;
+    var isStaffUser=isStaff(_currentUser.uid,_userData);
+    if(!isOwner&&!isStaffUser){toast('You do not have permission to edit this review.');return;}
+    return _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate});
+  }).then(res=>{
+    if(res!==undefined){toast('Review updated! ✓');navTo('review/'+id);}
+  }).catch(e=>{
+    console.error('saveReviewEdit error:',e);
+    toast('Error saving: '+e.message);
+  });
 }
 function deleteReview(id){
   if(!confirm('Delete this review? Cannot be undone.'))return;
