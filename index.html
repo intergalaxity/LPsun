@@ -701,8 +701,8 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     </div>
   </div>
   <!-- New DM search overlay -->
-  <div id="new-dm-overlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:300;align-items:flex-start;justify-content:center;padding-top:80px">
-    <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);width:100%;max-width:400px;padding:24px;margin:0 16px">
+  <div id="new-dm-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:600;align-items:flex-start;justify-content:center;padding-top:80px">
+    <div style="background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);width:100%;max-width:400px;padding:24px;margin:0 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <span style="font-weight:700;font-size:16px;color:var(--dk)">New Message</span>
         <button onclick="closeNewDMSearch()" style="background:none;border:none;cursor:pointer;color:var(--md)"><i class="material-icons">close</i></button>
@@ -790,6 +790,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
 var currentSearchTab='releases',currentProfileTab='reviews',profileViewId=null;
 var adminSelectedUser=null;
 var _savedRange=null, _activeEditorId='editor';
+var _msgConvListener=null, _msgChatListener=null;
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 var _viewIdMap={'review':'review-detail','edit-review':'edit-review','new-review':'new-review','new-news':'new-news'};
@@ -797,6 +798,12 @@ function navTo(path){
   var parts=path.split('/');
   var page=parts[0];
   closeNotifPanel();
+  // Clean up message listeners if leaving messages view
+  if(page!=='messages'){
+    if(typeof _msgConvListener==='function'){_msgConvListener();_msgConvListener=null;}
+    if(typeof _msgChatListener==='function'){_msgChatListener();_msgChatListener=null;}
+    _activeDMUserId=null;
+  }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   var viewId=(_viewIdMap[page]||page)+'-view';
   var vEl=document.getElementById(viewId);
@@ -1802,25 +1809,39 @@ function loadMessages(targetUid){
   if(!_currentUser){navTo('login');return;}
   var sidebar=document.getElementById('msg-convs-list');
   sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md)">Loading...</div>';
-  // Load conversations
-  _db.collection('conversations').where('participants','array-contains',_currentUser.uid).orderBy('lastAt','desc').get().then(snap=>{
-    if(snap.empty){
-      sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md);font-size:14px">No messages yet.<br>Hit + to start a conversation.</div>';
-    } else {
-      renderConvList(snap.docs);
-    }
-    // If target UID provided (from profile DM), open that chat
-    if(targetUid){openChat(targetUid);}
-    else if(!snap.empty){
-      // open most recent
-      var first=snap.docs[0].data();
-      var otherId=first.participants.find(p=>p!==_currentUser.uid);
-      if(otherId)openChat(otherId);
-    } else {
-      document.getElementById('msg-chat-header').innerHTML='<span style="color:var(--md);font-size:14px">Select or start a conversation</span>';
-      document.getElementById('msg-chat-messages').innerHTML='<div style="padding:40px;text-align:center;color:var(--md);font-size:14px">No messages yet.</div>';
-    }
-  }).catch(()=>{sidebar.innerHTML='<div style="padding:24px;color:var(--md)">Could not load.</div>';});
+
+  // Clear old listeners
+  if(_msgConvListener){_msgConvListener();_msgConvListener=null;}
+  if(_msgChatListener){_msgChatListener();_msgChatListener=null;}
+
+  // Real-time conversations listener — no orderBy to avoid needing composite index
+  _msgConvListener=_db.collection('conversations')
+    .where('participants','array-contains',_currentUser.uid)
+    .onSnapshot(snap=>{
+      // Sort client-side by lastAt desc
+      var docs=snap.docs.slice().sort((a,b)=>{
+        var ta=a.data().lastAt?a.data().lastAt.toMillis():0;
+        var tb=b.data().lastAt?b.data().lastAt.toMillis():0;
+        return tb-ta;
+      });
+      if(!docs.length){
+        sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md);font-size:14px">No messages yet.<br>Tap + to start a conversation.</div>';
+      } else {
+        renderConvList(docs);
+      }
+    },err=>{
+      sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md);font-size:13px">Tap + to start a conversation.</div>';
+    });
+
+  // If coming from a profile DM button, open that chat immediately
+  if(targetUid){
+    openChat(targetUid);
+  } else {
+    // Show placeholder until a conv is clicked
+    document.getElementById('msg-chat-header').innerHTML='<span style="color:var(--md);font-size:14px">Select a conversation or tap + to start one</span>';
+    document.getElementById('msg-chat-messages').innerHTML='';
+    document.getElementById('msg-chat-input-area').style.display='none';
+  }
 }
 
 function renderConvList(docs){
@@ -1840,9 +1861,9 @@ function renderConvList(docs){
       var photo=item.user.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
       var name=item.user.displayName||'Unknown';
       var last=d.lastText?esc2(d.lastText.slice(0,40)+(d.lastText.length>40?'…':'')):'';
-      return `<div class="msg-conv-item${item.otherId===_activeDMUserId?' active':''}" onclick="openChat('${item.otherId}')">
-        <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0">
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:${unread?700:500};color:var(--dk)">${esc2(name)}</div><div style="font-size:12px;color:var(--md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last}</div></div>
+      return `<div class="msg-conv-item${item.otherId===_activeDMUserId?' active':''}" data-uid="${item.otherId}" onclick="openChat('${item.otherId}')">
+        <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'">
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:${unread?700:500};color:var(--dk)">${esc2(name)}</div><div style="font-size:12px;color:var(--md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last||'Start chatting!'}</div></div>
         ${unread?'<div class="msg-unread-dot"></div>':''}
       </div>`;
     }).join('');
@@ -1854,27 +1875,48 @@ function openChat(otherUid){
   var header=document.getElementById('msg-chat-header');
   var messages=document.getElementById('msg-chat-messages');
   var inputArea=document.getElementById('msg-chat-input-area');
-  header.innerHTML='<div style="width:38px;height:38px;border-radius:50%;background:#e0e0e0;overflow:hidden;flex-shrink:0"><img id="dm-other-photo" src="" style="width:100%;height:100%;object-fit:cover"></div><span id="dm-other-name" style="font-weight:700;font-size:15px;color:var(--dk);cursor:pointer">Loading...</span>';
+
+  // Show loading state
+  header.innerHTML=`<div style="width:38px;height:38px;border-radius:50%;background:#e0e0e0;flex-shrink:0"></div><span style="font-weight:700;font-size:15px;color:var(--md)">Loading...</span>`;
   messages.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
   inputArea.style.display='block';
+
+  // Stop old chat listener
+  if(_msgChatListener){_msgChatListener();_msgChatListener=null;}
+
+  // Load the other user's profile first, then set up chat
   _db.collection('users').doc(otherUid).get().then(uDoc=>{
     var uData=uDoc.exists?uDoc.data():{};
     var photo=uData.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
-    var name=uData.displayName||'Unknown';
-    document.getElementById('dm-other-photo').src=photo;
-    document.getElementById('dm-other-name').textContent=name;
-    document.getElementById('dm-other-name').onclick=()=>navTo('profile/'+otherUid);
-    // Load messages
+    var name=esc2(uData.displayName||'Unknown');
+    // Build header with profile pic + name + click to profile
+    header.innerHTML=`<img src="${photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;cursor:pointer" onclick="navTo('profile/${otherUid}')" onerror="this.src='https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png'"><span style="font-weight:700;font-size:15px;color:var(--dk);cursor:pointer" onclick="navTo('profile/${otherUid}')">${name}</span>`;
+
+    // Highlight active conv in sidebar
+    document.querySelectorAll('.msg-conv-item').forEach(el=>{
+      el.classList.toggle('active', el.dataset.uid===otherUid);
+    });
+
+    // Real-time messages listener
     var convId=getConvId(_currentUser.uid,otherUid);
-    _db.collection('conversations').doc(convId).collection('messages').orderBy('createdAt','asc').get().then(snap=>{
-      if(snap.empty){messages.innerHTML='<div style="text-align:center;padding:40px;color:var(--md);font-size:14px">Send the first message!</div>';return;}
-      messages.innerHTML=snap.docs.map(doc=>renderMsgBubble(doc.data())).join('');
-      messages.scrollTop=messages.scrollHeight;
-      // Mark read
-      _db.collection('conversations').doc(convId).update({['unread.'+_currentUser.uid]:0}).catch(()=>{});
-    }).catch(()=>{messages.innerHTML='<div style="padding:20px;color:var(--md)">Could not load messages.</div>';});
-    // Highlight active conv
-    document.querySelectorAll('.msg-conv-item').forEach(el=>{el.classList.remove('active');if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes(otherUid))el.classList.add('active');});
+    _msgChatListener=_db.collection('conversations').doc(convId)
+      .collection('messages').orderBy('createdAt','asc')
+      .onSnapshot(snap=>{
+        if(snap.empty){
+          messages.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--md);font-size:14px">👋 Say hello to '+name+'!</div>';
+          return;
+        }
+        var wasAtBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<60;
+        messages.innerHTML=snap.docs.map(doc=>renderMsgBubble(doc.data())).join('');
+        if(wasAtBottom||messages.childElementCount===snap.docs.length)
+          messages.scrollTop=messages.scrollHeight;
+        // Mark read
+        _db.collection('conversations').doc(convId).update({['unread.'+_currentUser.uid]:0}).catch(()=>{});
+      }, err=>{
+        messages.innerHTML='<div style="padding:20px;text-align:center;color:var(--md);font-size:13px">Could not load messages.</div>';
+      });
+  }).catch(()=>{
+    header.innerHTML='<span style="color:var(--md)">Unknown user</span>';
   });
 }
 
