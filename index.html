@@ -401,10 +401,7 @@ header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
 .admin-search-input{width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px;background:transparent;color:var(--dk)}
 .admin-search-input:focus{border-bottom-color:var(--p)}
 .asu-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
-/* Follow button */
-.follow-bar{display:block;width:100%;margin-bottom:12px;padding:10px 16px;border-radius:4px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;font-family:'Roboto',sans-serif;transition:all .2s;border:none;box-shadow:var(--s2)}
-.follow-bar.not-following{background:var(--p);color:#fff}.follow-bar.not-following:hover{filter:brightness(1.1)}
-.follow-bar.following{background:#9e9e9e;color:#fff}.follow-bar.following:hover{filter:brightness(.95)}
+/* Staff buttons */
 .staff-btn{font-family:'Roboto',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;border-radius:2px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border:none;transition:all .15s}
 .sb-rotd{background:#fff3e0;color:var(--p)}.sb-rotd:hover{background:#ffe0b2}
 .sb-edit{background:#e8f5e9;color:#2e7d32}.sb-edit:hover{background:#c8e6c9}
@@ -431,8 +428,24 @@ header h1{font-size:20px;font-weight:500;margin:0 0 0 16px;cursor:pointer}
 footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margin-top:auto;border-top:1px solid var(--dv)}
 .ft{color:var(--p);font-size:20px;font-weight:700;margin-bottom:8px}
 .fc{font-size:14px;letter-spacing:.5px}
+/* Messages */
+.msg-conv-item{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--dv)}
+.msg-conv-item:hover{background:#fafafa}
+.msg-conv-item.active{background:#fff3e0}
+.msg-bubble{max-width:70%;padding:9px 14px;border-radius:18px;font-size:14px;line-height:1.4;word-break:break-word}
+.msg-bubble.mine{background:var(--p);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg-bubble.theirs{background:#fff;color:var(--dk);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--s2)}
+.msg-bubble a{color:inherit;text-decoration:underline}
+.msg-bubble.mine a{color:#ffe0b2}
+.msg-file-attach{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;font-size:13px;cursor:pointer}
+.msg-file-attach.mine{background:rgba(255,255,255,.2)}
+.msg-file-attach.theirs{background:#f5f5f5}
+.msg-img-bubble{max-width:240px;border-radius:12px;cursor:pointer;display:block}
+.msg-time{font-size:11px;color:var(--md);text-align:center;margin:4px 0}
+.msg-unread-dot{width:8px;height:8px;background:var(--p);border-radius:50%;flex-shrink:0;margin-left:auto}
+@media(max-width:600px){#msg-sidebar{width:100%}#msg-chat-area{display:none}#msg-sidebar.chat-open{display:none}#msg-chat-area.chat-open{display:flex}}
 .view{display:none}.view.active{display:block}
-#cfile,#profile-file-input{display:none}
+#messages-view{position:relative}
 </style>
 </head>
 <body>
@@ -443,6 +456,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
 <div class="dlo" id="dlg-img"><div class="dlg"><h3>Insert Image</h3><input class="dinp" id="img-url" placeholder="https://..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-img')">Cancel</button><button class="dbtn dok" onclick="doInsertImg()">Insert</button></div></div></div>
 <div class="dlo" id="dlg-embed"><div class="dlg"><h3>Embed Content</h3><input class="dinp" id="emb-url" placeholder="YouTube, Spotify, SoundCloud URL..."><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-embed')">Cancel</button><button class="dbtn dok" onclick="doInsertEmbed()">Embed</button></div></div></div>
 <div class="dlo" id="dlg-edit-profile"><div class="dlg" style="max-width:500px"><h3>Edit Profile</h3><div class="input-group"><label>SCREEN NAME</label><input type="text" id="edit-p-name" oninput="checkUsernameAvailability(this.value)"><div id="username-check-status" style="font-size:12px;margin-top:5px;min-height:16px"></div></div><div class="input-group"><label>BIO</label><textarea id="edit-p-bio"></textarea></div><div class="input-group"><label>WEBSITE</label><input type="url" id="edit-p-web" placeholder="https://..."></div><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-edit-profile')">Cancel</button><button class="dbtn dok" id="save-profile-btn" onclick="saveProfile()">Save Changes</button></div></div></div>
+<div class="dlo" id="dlg-unfollow"><div class="dlg"><h3 id="dlg-unfollow-title">Unfollow user?</h3><p style="font-size:14px;color:var(--md);margin:0 0 20px">Their posts will no longer appear in your feed.</p><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-unfollow')">Cancel</button><button class="dbtn dok" style="background:#d32f2f" id="dlg-unfollow-confirm">Unfollow</button></div></div></div>
 <div class="dlo" id="dlg-add-badge"><div class="dlg"><h3>Add Custom Badge</h3><p class="dlg-note">Tip: naming a badge <b>Staff</b> grants staff permissions to that user.</p><input class="dinp" id="badge-text" placeholder="Badge name (e.g. Staff, Critic, Legend)"><input class="dinp" id="badge-color" placeholder="Text color hex" value="#7b1fa2"><input class="dinp" id="badge-bg" placeholder="Background color hex" value="#f3e5f5"><input type="hidden" id="badge-target-uid"><div class="dact"><button class="dbtn dcan" onclick="closeDlg('dlg-add-badge')">Cancel</button><button class="dbtn dok" onclick="doAddBadge()">Add Badge</button></div></div></div>
 
 <!-- Notification panel -->
@@ -470,7 +484,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <div class="drawer-divider"></div>
     <div id="drawer-logged-in-only" style="display:none">
       <div class="drawer-item" onclick="navTo('profile/'+_currentUser.uid);closeDrawer()"><i class="material-icons">person</i>My Profile</div>
-      <div class="drawer-item" onclick="navTo('following');closeDrawer()"><i class="material-icons">people</i>Following</div>
+      <div class="drawer-item" onclick="navTo('messages');closeDrawer()"><i class="material-icons">chat</i>Messages</div>
       <div class="drawer-item" onclick="navTo('notifications');closeDrawer()"><i class="material-icons">notifications</i>All Notifications</div>
       <div id="drawer-admin-item" style="display:none"><div class="drawer-item" onclick="navTo('admin');closeDrawer()"><i class="material-icons" style="color:var(--p)">admin_panel_settings</i><span style="color:var(--p)">Admin Panel</span></div></div>
       <div class="drawer-item" onclick="doLogout()"><i class="material-icons">exit_to_app</i>Log Out</div>
@@ -541,8 +555,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
   <div class="rwrap"><div class="rcard">
     <div class="rsec"><p class="slbl">Release Information</p>
       <div class="fr"><div class="fld"><label>Artist / Band</label><input type="text" id="r-artist" placeholder="e.g. Radiohead"></div><div class="fld"><label>Album / Release Title</label><input type="text" id="r-work" placeholder="e.g. In Rainbows"></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Type of Release</label><select id="r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Release Date</label><input type="date" id="r-release-date"></div></div>
+      <div style="margin-top:24px" class="fr"><div class="fld"><label>Type of Release</label><select id="r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div><div class="fld"><label>Genre</label><select id="r-genre"><option value="">— Select Genre —</option><option>Alternative</option><option>Ambient</option><option>Blues</option><option>Classical</option><option>Country</option><option>Dance / Electronic</option><option>Experimental</option><option>Folk</option><option>Hip-Hop / Rap</option><option>Indie</option><option>Jazz</option><option>Latin</option><option>Metal</option><option>Pop</option><option>Punk</option><option>R&amp;B / Soul</option><option>Reggae</option><option>Rock</option><option>Singer-Songwriter</option><option>World</option><option>Other</option></select></div></div>
     </div>
     <div class="rsec"><p class="slbl">Your Rating</p><div class="sw"><div class="stars"><input type="radio" name="rating" id="s5" value="5"><label for="s5">&#9733;</label><input type="radio" name="rating" id="s4" value="4"><label for="s4">&#9733;</label><input type="radio" name="rating" id="s3" value="3"><label for="s3">&#9733;</label><input type="radio" name="rating" id="s2" value="2"><label for="s2">&#9733;</label><input type="radio" name="rating" id="s1" value="1"><label for="s1">&#9733;</label></div><span class="slb" id="star-lbl">Click to rate</span></div></div>
     <div class="rsec"><p class="slbl">Cover Art</p>
@@ -580,8 +593,7 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
     <input type="hidden" id="edit-review-id">
     <div class="rsec"><p class="slbl">Release Information</p>
       <div class="fr"><div class="fld"><label>Artist / Band</label><input type="text" id="edit-r-artist"></div><div class="fld"><label>Release Title</label><input type="text" id="edit-r-work"></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Type</label><select id="edit-r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div></div>
-      <div style="margin-top:24px"><div class="fld"><label>Release Date</label><input type="date" id="edit-r-release-date"></div></div>
+      <div style="margin-top:24px" class="fr"><div class="fld"><label>Type</label><select id="edit-r-type"><option value="">— Select Type —</option><option>LP (Full Album)</option><option>EP</option><option>Mixtape</option><option>Single</option><option>Live Album</option><option>Compilation</option></select></div><div class="fld"><label>Genre</label><select id="edit-r-genre"><option value="">— Select Genre —</option><option>Alternative</option><option>Ambient</option><option>Blues</option><option>Classical</option><option>Country</option><option>Dance / Electronic</option><option>Experimental</option><option>Folk</option><option>Hip-Hop / Rap</option><option>Indie</option><option>Jazz</option><option>Latin</option><option>Metal</option><option>Pop</option><option>Punk</option><option>R&amp;B / Soul</option><option>Reggae</option><option>Rock</option><option>Singer-Songwriter</option><option>World</option><option>Other</option></select></div></div>
     </div>
     <div class="rsec"><p class="slbl">Rating</p><div class="sw"><div class="stars"><input type="radio" name="edit-rating" id="es5" value="5"><label for="es5">&#9733;</label><input type="radio" name="edit-rating" id="es4" value="4"><label for="es4">&#9733;</label><input type="radio" name="edit-rating" id="es3" value="3"><label for="es3">&#9733;</label><input type="radio" name="edit-rating" id="es2" value="2"><label for="es2">&#9733;</label><input type="radio" name="edit-rating" id="es1" value="1"><label for="es1">&#9733;</label></div><span class="slb" id="edit-star-lbl">Click to rate</span></div></div>
     <div class="rsec"><p class="slbl">Cover Art</p><div class="covs"><div class="covp" id="edit-covp"><img id="edit-covImg" src="" alt="Cover" style="display:none"><div class="covph" id="edit-covPH"><i class="material-icons">album</i><span>Preview</span></div></div><div class="covin"><div class="fld"><label>Image URL</label><input type="url" id="edit-r-cover-url" placeholder="https://..."></div><div class="cor">OR</div><input type="file" id="edit-cfile" accept="image/*" style="display:none"><button class="bup" onclick="document.getElementById('edit-cfile').click()"><i class="material-icons">cloud_upload</i>Upload</button></div></div></div>
@@ -626,12 +638,16 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
       <div id="p-badges-row" style="margin-bottom:8px;line-height:2"></div>
       <div class="profile-bio" id="p-bio">No bio provided.</div>
       <button class="profile-edit-btn" id="p-edit-btn" style="display:none" onclick="openEditProfile()">Edit Profile</button>
-      <button class="follow-bar not-following" id="p-follow-btn" style="display:none" onclick="toggleFollow()">+ Follow</button>
+      <div id="p-follow-row" style="display:none;gap:8px;margin-bottom:16px;align-items:center">
+        <button id="p-follow-btn" onclick="toggleFollow()" style="flex:1;border:none;background:var(--p);color:#fff;padding:9px 16px;border-radius:4px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;font-family:'Roboto',sans-serif;transition:filter .2s;box-shadow:var(--s2)">Follow</button>
+        <button id="p-dm-btn" onclick="openDMFromProfile()" title="Send Message" style="width:40px;height:40px;border-radius:4px;border:1px solid var(--dv);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--md);transition:all .2s;box-shadow:var(--s2)"><i class="material-icons" style="font-size:20px">email</i></button>
+      </div>
       <div class="profile-meta" id="p-joined"><i class="material-icons">calendar_today</i>&nbsp;Joined</div>
       <a href="#" target="_blank" class="profile-web" id="p-web" style="display:none"><i class="material-icons">link</i><span id="p-web-text"></span></a>
       <div class="profile-stats">
         <div class="stat-item"><span class="stat-val" id="p-stat-reviews">0</span>&nbsp;reviews</div>
         <div class="stat-item"><span class="stat-val" id="p-stat-comments">0</span>&nbsp;comments</div>
+        <div class="stat-item"><span class="stat-val" id="p-stat-followers">0</span>&nbsp;followers</div>
       </div>
     </aside>
     <div class="profile-main">
@@ -648,16 +664,53 @@ footer{background:#fff;color:var(--md);padding:48px 24px;text-align:center;margi
   </div>
 </div>
 
-<!-- Following Page -->
-<div id="following-view" class="view">
-  <div class="rph"><h2><b>Following</b></h2><p>Users you follow. You'll be notified when they post a review.</p></div>
-  <div class="notif-full-wrap" id="following-list"></div>
-</div>
-
 <!-- All Notifications -->
 <div id="notifications-view" class="view">
   <div class="rph"><h2><b>Notifications</b></h2><p>Your complete notification history.</p></div>
   <div class="notif-full-wrap" id="all-notifs-list"></div>
+</div>
+
+<!-- Messages View -->
+<div id="messages-view" class="view">
+  <div style="display:flex;height:calc(100vh - 64px);overflow:hidden">
+    <!-- Conversations list -->
+    <div id="msg-sidebar" style="width:300px;flex-shrink:0;border-right:1px solid var(--dv);background:#fff;display:flex;flex-direction:column">
+      <div style="padding:16px;border-bottom:1px solid var(--dv);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--p)">Messages</span>
+        <button onclick="openNewDMSearch()" title="New Message" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--p);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="material-icons" style="font-size:18px">add</i></button>
+      </div>
+      <div id="msg-convs-list" style="flex:1;overflow-y:auto"></div>
+    </div>
+    <!-- Chat area -->
+    <div id="msg-chat-area" style="flex:1;display:flex;flex-direction:column;min-width:0">
+      <div id="msg-chat-header" style="padding:12px 20px;border-bottom:1px solid var(--dv);background:#fff;display:flex;align-items:center;gap:12px;min-height:57px"></div>
+      <div id="msg-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)"></div>
+      <div id="msg-chat-input-area" style="padding:12px 16px;border-top:1px solid var(--dv);background:#fff;display:none">
+        <div style="display:flex;align-items:flex-end;gap:8px">
+          <input type="file" id="msg-file-input" style="display:none" onchange="handleMsgFileAttach(event)">
+          <button onclick="document.getElementById('msg-file-input').click()" title="Attach file" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;border:1px solid var(--dv);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--md)"><i class="material-icons" style="font-size:18px">attach_file</i></button>
+          <textarea id="msg-input" placeholder="Type a message..." rows="1" style="flex:1;border:1px solid var(--dv);border-radius:20px;padding:8px 16px;font-size:14px;font-family:'Roboto',sans-serif;outline:none;resize:none;line-height:1.4;max-height:120px;overflow-y:auto" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          <button onclick="sendMessage()" style="width:36px;height:36px;flex-shrink:0;border-radius:50%;border:none;background:var(--p);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="material-icons" style="font-size:18px">send</i></button>
+        </div>
+        <div id="msg-attach-preview" style="display:none;margin-top:8px;padding:8px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--dk);display:flex;align-items:center;gap:8px">
+          <i class="material-icons" style="font-size:16px;color:var(--p)">attachment</i>
+          <span id="msg-attach-name"></span>
+          <button onclick="clearMsgAttach()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--md)"><i class="material-icons" style="font-size:16px">close</i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- New DM search overlay -->
+  <div id="new-dm-overlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:300;align-items:flex-start;justify-content:center;padding-top:80px">
+    <div style="background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.25);width:100%;max-width:400px;padding:24px;margin:0 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <span style="font-weight:700;font-size:16px;color:var(--dk)">New Message</span>
+        <button onclick="closeNewDMSearch()" style="background:none;border:none;cursor:pointer;color:var(--md)"><i class="material-icons">close</i></button>
+      </div>
+      <input id="new-dm-search" placeholder="Search users..." style="width:100%;border:none;border-bottom:2px solid var(--dv);padding:8px 0;font-size:15px;font-family:'Roboto',sans-serif;outline:none;transition:border-color .2s" oninput="searchDMUsers(this.value)" onfocus="this.style.borderBottomColor='var(--p)'" onblur="this.style.borderBottomColor='var(--dv)'">
+      <div id="new-dm-results" style="margin-top:12px;max-height:280px;overflow-y:auto"></div>
+    </div>
+  </div>
 </div>
 
 <!-- News Page -->
@@ -759,7 +812,7 @@ function navTo(path){
   else if(page==='news')loadNews();
   else if(page==='new-news'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('news');}
   else if(page==='notifications')loadAllNotifications();
-  else if(page==='following')loadFollowingPage();
+  else if(page==='messages')loadMessages(parts[1]||null);
   else if(page==='admin'){if(!_currentUser||!isStaff(_currentUser&&_currentUser.uid,_userData))navTo('home');}
   else if(page==='new-review'){if(!_currentUser){navTo('login');}}
 }
@@ -792,7 +845,7 @@ function loadNotifications(){
       var n=doc.data();if(!n.read)unread++;
       var ic=notifIconClass(n.type),iconName=notifIconName(n.type);
       var time=n.createdAt?new Date(n.createdAt.toMillis()).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      html+='<div class="notif-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\')"><div class="notif-icon '+ic+'"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
+      html+='<div class="notif-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\',\''+(n.commentId||'')+'\')"><div class="notif-icon '+ic+'"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
     });
     document.getElementById('notif-list').innerHTML=html||'<div class="notif-empty">No notifications for right now.</div>';
     document.getElementById('bell-dot').style.display=unread>0?'block':'none';
@@ -816,7 +869,7 @@ function loadAllNotifications(){
       var n=doc.data();
       var ic=notifIconClass(n.type),iconName=notifIconName(n.type);
       var time=n.createdAt?new Date(n.createdAt.toMillis()).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'';
-      html+='<div class="notif-full-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\')"><div class="notif-icon '+ic+'" style="width:36px;height:36px;flex-shrink:0"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
+      html+='<div class="notif-full-item'+(n.read?'':' unread')+'" onclick="markNotifRead(\''+doc.id+'\',\''+(n.reviewId||'')+'\',\''+(n.commentId||'')+'\')"><div class="notif-icon '+ic+'" style="width:36px;height:36px;flex-shrink:0"><i class="material-icons">'+iconName+'</i></div><div><div class="notif-text">'+esc2(n.text||'')+'</div><div class="notif-time">'+time+'</div></div></div>';
       if(!n.read)batch.update(doc.ref,{read:true});
     });
     batch.commit().catch(function(){});
@@ -825,11 +878,27 @@ function loadAllNotifications(){
   }).catch(function(){wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load.</div>';});
 }
 
-function markNotifRead(id,reviewId){
+function markNotifRead(id,reviewId,commentId){
   if(id)_db.collection('notifications').doc(id).update({read:true}).catch(()=>{});
   loadNotifications();
   closeNotifPanel();
-  if(reviewId)navTo('review/'+reviewId);
+  if(reviewId){
+    navTo('review/'+reviewId);
+    if(commentId){
+      // Wait for comments to load, then scroll and highlight
+      var attempts=0;
+      var tryHighlight=function(){
+        var el=document.getElementById('cmt-'+commentId);
+        if(el){
+          el.scrollIntoView({behavior:'smooth',block:'center'});
+          el.style.transition='background .3s';
+          el.style.background='rgba(239,108,0,.18)';
+          setTimeout(()=>{el.style.background='';},2000);
+        } else if(attempts<20){attempts++;setTimeout(tryHighlight,200);}
+      };
+      setTimeout(tryHighlight,600);
+    }
+  }
 }
 function markAllRead(){
   if(!_currentUser)return;
@@ -839,11 +908,11 @@ function markAllRead(){
     document.querySelectorAll('.notif-item.unread').forEach(el=>el.classList.remove('unread'));
   });
 }
-function sendNotification(toUid,type,text,reviewId){
+function sendNotification(toUid,type,text,reviewId,commentId){
   if(!toUid)return;
   // Allow warnings from staff even to self for testing; skip self-comment/reply notifs
   if(type!=='warning'&&_currentUser&&toUid===_currentUser.uid)return;
-  _db.collection('notifications').add({toUid,type,text,reviewId:reviewId||null,read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  _db.collection('notifications').add({toUid,type,text,reviewId:reviewId||null,commentId:commentId||null,read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
 }
 
 // ── Search ──────────────────────────────────────────────────────────────────
@@ -1003,7 +1072,7 @@ function showReviewDetail(reviewId){
           +'<div class="rv-artist" onclick="navTo(\'artist/'+encodeURIComponent(r.artist||'')+'\')">'+esc2(r.artist||'')+'</div>'
           +'<div class="rv-stars">'+stars+'</div>'
           +'<div class="rv-byline">Review by <span class="rv-author" onclick="navTo(\'profile/'+r.authorId+'\')">'+esc2(r.authorName||'Unknown')+ver+'</span></div>'
-          +'<div class="rv-date">'+dateStr+(r.type?' · '+r.type:'')+(r.releaseDate?' · Released: '+r.releaseDate:'')+'</div>'
+          +'<div class="rv-date">'+dateStr+(r.type?' · '+r.type:'')+(r.genre?' · <span style="background:#fff3e0;color:var(--p);font-size:11px;font-weight:700;letter-spacing:.5px;padding:1px 7px;border-radius:10px;text-transform:uppercase">'+esc2(r.genre)+'</span>':'')+'</div>'
         +'</div>'
       +'</div>'
       +staffBar
@@ -1122,7 +1191,7 @@ function postComment(reviewId,reviewAuthorId){
     _db.collection('users').doc(_currentUser.uid).update({commentCount:firebase.firestore.FieldValue.increment(1)});
     // store for profile comments tab
     _db.collection('userComments').add({uid:_currentUser.uid,reviewId,commentId:newRef.id,text,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    sendNotification(reviewAuthorId,'comment',name+' commented on your review.',reviewId);
+    sendNotification(reviewAuthorId,'comment',name+' commented on your review.',reviewId,newRef.id);
     loadComments(reviewId,reviewAuthorId);
   });
 }
@@ -1142,7 +1211,7 @@ function postReply(commentId,reviewId,reviewAuthorId){
       // store for profile comments tab
       _db.collection('userComments').add({uid:_currentUser.uid,reviewId,commentId:newRef.id,text,isReply:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
       _db.collection('users').doc(_currentUser.uid).update({commentCount:firebase.firestore.FieldValue.increment(1)}).catch(()=>{});
-      if(commentAuthorId)sendNotification(commentAuthorId,'reply',name+' replied to your comment.',reviewId);
+      if(commentAuthorId)sendNotification(commentAuthorId,'reply',name+' replied to your comment.',reviewId,newRef.id);
       input.value='';
       document.getElementById('reply-box-'+commentId).style.display='none';
       // reload replies
@@ -1205,60 +1274,13 @@ function starsHtml(r){var s='';for(var i=1;i<=5;i++)s+=i<=r?'★':'<span class="
 
 function homeCardHtml(doc){
   var r=doc.data(),id=doc.id;
-  var sv=isStaff(r.authorId)||r.authorIsStaff||r.authorVerified;
+  var sv=isStaff(r.authorId)||r.authorIsStaff;
   var ver=sv?'<i class="material-icons" style="color:var(--p);font-size:11px;vertical-align:middle">verified</i>':'';
   // cover fills full height via absolute positioning
   var cover=r.coverUrl
     ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
     :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
-}
-
-var _homeRestDocs={newest:[],staff:[]};
-
-// Cache of uid -> verified status to avoid repeated lookups
-var _verifiedCache={};
-function getVerifiedStatus(uid,callback){
-  if(!uid){callback(false);return;}
-  // Owner is always verified — no lookup needed
-  if(uid===OWNER_UID){callback(true);return;}
-  if(_verifiedCache[uid]!==undefined){callback(_verifiedCache[uid]);return;}
-  _db.collection('users').doc(uid).get().then(doc=>{
-    var v=doc.exists&&(doc.data().verified||doc.data().isStaff||isStaff(uid,doc.data()))||false;
-    _verifiedCache[uid]=v;
-    callback(v);
-  }).catch(()=>{_verifiedCache[uid]=false;callback(false);});
-}
-
-function applyVerifiedTicks(docs){
-  docs.forEach(function(doc){
-    var r=doc.data(),id=doc.id;
-    if(!r.authorId)return;
-    getVerifiedStatus(r.authorId,function(verified){
-      if(!verified)return;
-      // Find the byline in the rendered card and inject the tick
-      var card=document.querySelector('.home-review-card[data-id="'+id+'"]');
-      if(!card)return;
-      var byline=card.querySelector('.home-review-by');
-      if(!byline)return;
-      // Only add if not already there
-      if(!byline.querySelector('.hrc-ver')){
-        var tick=document.createElement('i');
-        tick.className='material-icons hrc-ver';
-        tick.style.cssText='color:var(--p);font-size:11px;vertical-align:middle;margin-left:2px';
-        tick.textContent='verified';
-        byline.appendChild(tick);
-      }
-    });
-  });
-}
-
-function homeCardHtml(doc){
-  var r=doc.data(),id=doc.id;
-  var cover=r.coverUrl
-    ?`<div class="hrc-cover"><img src="${r.coverUrl}" onerror="this.style.display='none'"><div class="hrc-cover-ph" style="display:none"><i class="material-icons">album</i></div></div>`
-    :`<div class="hrc-cover"><div class="hrc-cover-ph"><i class="material-icons">album</i></div></div>`;
-  return `<div class="home-review-card" data-id="${id}" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong></div></div></div>`;
+  return `<div class="home-review-card" onclick="navTo('review/${id}')">${cover}<div class="home-review-info"><div class="home-review-work">${r.work||'Untitled'}</div><div class="home-review-artist">${r.artist||''}</div><div class="home-review-stars">${starsHtml(r.rating)}</div><div class="home-review-by">by <strong style="color:var(--dk);margin:0 1px">${r.authorName||'Unknown'}</strong>${ver}</div></div></div>`;
 }
 
 function loadHomeReviews(){
@@ -1271,37 +1293,27 @@ function loadHomeReviews(){
   _db.collection('reviews').orderBy('createdAt','desc').get().then(snap=>{
     if(snap.empty){newestEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No reviews yet.</div>';return;}
     var all=snap.docs,first3=all.slice(0,3),rest=all.slice(3);
-    _homeRestDocs.newest=rest;
     var inner=first3.map(d=>homeCardHtml(d)).join('');
-    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'newest')">Show ${rest.length} more ▾</div>`;
+    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'newest',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
     newestEl.innerHTML=inner;
-    applyVerifiedTicks(first3);
   }).catch(e=>{newestEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No reviews yet.</div>';});
   _db.collection('reviews').where('authorId','==',OWNER_UID).get().then(snap=>{
     if(snap.empty){staffEl.innerHTML='<div style="padding:16px;color:#999;font-style:italic;font-size:14px">No staff reviews yet.</div>';return;}
     var docs=snap.docs.sort((a,b)=>{var ta=a.data().createdAt?a.data().createdAt.toMillis():0,tb=b.data().createdAt?b.data().createdAt.toMillis():0;return tb-ta;});
     var first3=docs.slice(0,3),rest=docs.slice(3);
-    _homeRestDocs.staff=rest;
     var inner=first3.map(d=>homeCardHtml(d)).join('');
-    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'staff')">Show ${rest.length} more ▾</div>`;
+    if(rest.length)inner+=`<div class="show-more-bar" onclick="expandReviews(this,'staff',${JSON.stringify(rest.map(d=>d.id))})">Show ${rest.length} more ▾</div>`;
     staffEl.innerHTML=inner;
-    applyVerifiedTicks(first3);
   }).catch(()=>{staffEl.innerHTML='<div style="padding:16px;color:#999;font-size:14px">No staff reviews yet.</div>';});
 }
 
-function expandReviews(btn,section){
+function expandReviews(btn,section,ids){
   var container=document.getElementById(section+'-reviews-container');
-  var rest=_homeRestDocs[section]||[];
   btn.remove();
-  rest.forEach(doc=>{
-    if(doc.exists!==false){
-      var div=document.createElement('div');
-      div.innerHTML=homeCardHtml(doc);
-      container.appendChild(div.firstChild);
-    }
+  if(!ids.length)return;
+  Promise.all(ids.map(id=>_db.collection('reviews').doc(id).get())).then(docs=>{
+    docs.forEach(doc=>{if(doc.exists){var div=document.createElement('div');div.innerHTML=homeCardHtml(doc);container.appendChild(div.firstChild);}});
   });
-  setTimeout(function(){applyVerifiedTicks(rest);},50);
-  _homeRestDocs[section]=[];
 }
 // Load home on startup
 loadHomeReviews();
@@ -1340,55 +1352,23 @@ function showProfile(uid){
     var isMe=_currentUser&&_currentUser.uid===uid;
     document.getElementById('p-edit-btn').style.display=isMe?'block':'none';
     document.getElementById('p-photo-overlay').style.display=isMe?'flex':'none';
-    // Follow button
-    var followBtn=document.getElementById('p-follow-btn');
+    // Follow / DM row
+    var followRow=document.getElementById('p-follow-row');
     if(!isMe&&_currentUser){
-      followBtn.style.display='block';
-      _db.collection('users').doc(_currentUser.uid).collection('following').doc(uid).get().then(fd=>{
-        if(fd.exists){followBtn.className='follow-bar following';followBtn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';}
-        else{followBtn.className='follow-bar not-following';followBtn.innerHTML='+ Follow';}
+      followRow.style.display='flex';
+      // Check if already following
+      _db.collection('follows').doc(_currentUser.uid+'_'+uid).get().then(fd=>{
+        var btn=document.getElementById('p-follow-btn');
+        if(fd.exists){btn.textContent='Following';btn.style.background='#fff';btn.style.color='var(--p)';btn.style.border='1px solid var(--p)';}
+        else{btn.textContent='Follow';btn.style.background='var(--p)';btn.style.color='#fff';btn.style.border='none';}
       });
-    } else {followBtn.style.display='none';}
+    } else {followRow.style.display='none';}
+    // Followers count
+    _db.collection('follows').where('followingId','==',uid).get().then(fs=>{
+      document.getElementById('p-stat-followers').textContent=fs.size||0;
+    }).catch(()=>{});
     renderProfileContent();
   });
-}
-
-function toggleFollow(){
-  if(!_currentUser){navTo('login');return;}
-  var uid=profileViewId;if(!uid||uid===_currentUser.uid)return;
-  var followRef=_db.collection('users').doc(_currentUser.uid).collection('following').doc(uid);
-  var btn=document.getElementById('p-follow-btn');
-  followRef.get().then(fd=>{
-    if(fd.exists){
-      followRef.delete().then(()=>{btn.className='follow-bar not-following';btn.innerHTML='+ Follow';toast('Unfollowed.');});
-    } else {
-      _db.collection('users').doc(uid).get().then(ud=>{
-        var name=ud.exists?(ud.data().displayName||'Unknown'):'Unknown';
-        followRef.set({displayName:name,followedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-          btn.className='follow-bar following';btn.innerHTML='<i class="material-icons" style="font-size:15px;vertical-align:middle">check</i> Following';
-          toast('Following '+name+'!');
-          var myName=(_userData&&_userData.displayName)||'Someone';
-          sendNotification(uid,'info',myName+' started following you.',null);
-        });
-      });
-    }
-  });
-}
-
-function loadFollowingPage(){
-  if(!_currentUser){navTo('login');return;}
-  var wrap=document.getElementById('following-list');
-  wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
-  _db.collection('users').doc(_currentUser.uid).collection('following').get().then(snap=>{
-    if(snap.empty){wrap.innerHTML='<div style="padding:60px;text-align:center;color:var(--md);font-size:15px">You\'re not following anyone yet. Visit a user\'s profile to follow them!</div>';return;}
-    var html='<div class="search-results-box">';
-    snap.docs.forEach(doc=>{
-      var d=doc.data();
-      html+=`<div class="search-result-item" onclick="navTo('profile/${doc.id}')"><div class="search-result-cover-ph" style="border-radius:50%"><i class="material-icons">person</i></div><div class="search-result-main"><div class="search-result-title">${d.displayName||'Unknown'}</div></div><i class="material-icons" style="color:var(--md)">chevron_right</i></div>`;
-    });
-    html+='</div>';
-    wrap.innerHTML=html;
-  }).catch(()=>{wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Could not load following list.</div>';});
 }
 
 function removeBadge(uid,idx){
@@ -1480,7 +1460,6 @@ function saveProfile(){
   var bio=document.getElementById('edit-p-bio').value.trim();
   var website=document.getElementById('edit-p-web').value.trim();
   if(!newName){toast('Username cannot be empty.');return;}
-  if(!validateUsername(newName)){toast('Username can only contain letters, numbers, hyphens (-), underscores (_), and dots (.). No spaces.');return;}
   var saveBtn=document.getElementById('save-profile-btn');
   var oldName=(_userData&&_userData.displayName)||'';
   // If name hasn't changed, skip uniqueness check
@@ -1522,7 +1501,6 @@ function checkUsernameAvailability(val){
   var name=val.trim();
   var currentName=(_userData&&_userData.displayName)||'';
   if(!name){st.textContent='';if(saveBtn)saveBtn.disabled=false;return;}
-  if(!validateUsername(name)){st.textContent='✗ Only letters, numbers, -, _, . allowed (no spaces)';st.style.color='#d32f2f';if(saveBtn)saveBtn.disabled=true;return;}
   // Same as current name — always available
   if(name.toLowerCase()===currentName.toLowerCase()){
     st.textContent='✓ Your current username';st.style.color='#2e7d32';
@@ -1555,19 +1533,14 @@ function uploadProfilePic(e){
 var _editPendingB64=null;
 function fmtE(cmd,val){document.getElementById('edit-editor').focus();document.execCommand(cmd,false,val||null);}
 function openEditReview(id){
-  if(!_currentUser){navTo('login');return;}
   _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists){toast('Review not found.');navTo('home');return;}
+    if(!doc.exists)return;
     var r=doc.data();
-    // Permission check: must be author or staff
-    if(r.authorId!==_currentUser.uid&&!isStaff(_currentUser.uid,_userData)){
-      toast('You can only edit your own reviews.');navTo('review/'+id);return;
-    }
     document.getElementById('edit-review-id').value=id;
     document.getElementById('edit-r-artist').value=r.artist||'';
     document.getElementById('edit-r-work').value=r.work||'';
     document.getElementById('edit-r-type').value=r.type||'';
-    document.getElementById('edit-r-release-date').value=r.releaseDate||'';
+    document.getElementById('edit-r-genre').value=r.genre||'';
     document.getElementById('edit-editor').innerHTML=r.body||'';
     _editPendingB64=null;
     document.querySelectorAll('input[name="edit-rating"]').forEach(el=>el.checked=false);
@@ -1581,27 +1554,13 @@ document.getElementById('edit-cfile').addEventListener('change',function(){var f
 document.querySelectorAll('input[name="edit-rating"]').forEach(r=>{r.addEventListener('change',()=>{var sl=['','Terrible','Poor','Decent','Great','Essential'];document.getElementById('edit-star-lbl').textContent=sl[r.value]+' ('+r.value+'/5)';});});
 
 function saveReviewEdit(){
-  if(!_currentUser){toast('You must be logged in to edit.');return;}
   var id=document.getElementById('edit-review-id').value;
-  if(!id){toast('No review ID found.');return;}
   var artist=document.getElementById('edit-r-artist').value.trim(),work=document.getElementById('edit-r-work').value.trim(),type=document.getElementById('edit-r-type').value;
+  var genre=document.getElementById('edit-r-genre').value;
   var rEl=document.querySelector('input[name="edit-rating"]:checked'),body=document.getElementById('edit-editor').innerHTML.trim();
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_editPendingB64||document.getElementById('edit-r-cover-url').value.trim()||null;
-  var releaseDate=document.getElementById('edit-r-release-date').value||null;
-  // Verify the current user owns this review OR is staff before updating
-  _db.collection('reviews').doc(id).get().then(doc=>{
-    if(!doc.exists){toast('Review not found.');return;}
-    var isOwner=doc.data().authorId===_currentUser.uid;
-    var isStaffUser=isStaff(_currentUser.uid,_userData);
-    if(!isOwner&&!isStaffUser){toast('You do not have permission to edit this review.');return;}
-    return _db.collection('reviews').doc(id).update({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate});
-  }).then(res=>{
-    if(res!==undefined){toast('Review updated! ✓');navTo('review/'+id);}
-  }).catch(e=>{
-    console.error('saveReviewEdit error:',e);
-    toast('Error saving: '+e.message);
-  });
+  _db.collection('reviews').doc(id).update({artist,work,type,genre,rating:parseInt(rEl.value),body,coverUrl:cover}).then(()=>{toast('Review updated! ✓');navTo('review/'+id);}).catch(e=>toast('Error: '+e.message));
 }
 function deleteReview(id){
   if(!confirm('Delete this review? Cannot be undone.'))return;
@@ -1623,28 +1582,14 @@ document.querySelectorAll('input[name="rating"]').forEach(r=>{r.addEventListener
 function submitReview(){
   if(!_currentUser){toast('Please log in.');return;}
   var artist=document.getElementById('r-artist').value.trim(),work=document.getElementById('r-work').value.trim(),type=document.getElementById('r-type').value;
+  var genre=document.getElementById('r-genre').value;
   var rEl=document.querySelector('input[name="rating"]:checked'),body=document.getElementById('editor').innerHTML.trim();
   if(!artist||!work){toast('Fill in Artist and Work.');return;}if(!rEl){toast('Select a rating.');return;}if(!body){toast('Write your review.');return;}
   var cover=_pendingB64||document.getElementById('r-cover-url').value.trim()||null;
-  var releaseDate=document.getElementById('r-release-date').value||null;
-  _db.collection('reviews').add({artist,work,type,rating:parseInt(rEl.value),body,coverUrl:cover,releaseDate,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,authorVerified:(_userData&&(_userData.verified||_userData.isStaff||isStaff(_currentUser.uid,_userData)))||false,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
+  _db.collection('reviews').add({artist,work,type,genre,rating:parseInt(rEl.value),body,coverUrl:cover,authorId:_currentUser.uid,authorName:(_userData&&_userData.displayName)||_currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),likes:0,dislikes:0,likedBy:[],dislikedBy:[]}).then(newDoc=>{
     _db.collection('users').doc(_currentUser.uid).update({reviewCount:firebase.firestore.FieldValue.increment(1)});
-    // Notify followers
-    var authorName=(_userData&&_userData.displayName)||'Someone';
-    _db.collection('users').doc(_currentUser.uid).collection('followers').get().then(fSnap=>{
-      fSnap.docs.forEach(fd=>{sendNotification(fd.id,'info',authorName+' posted a new review: '+work,newDoc.id);});
-    }).catch(()=>{});
-    // Also notify via reverse index: find who follows this user
-    _db.collection('users').get().then(allSnap=>{
-      allSnap.docs.forEach(ud=>{
-        if(ud.id===_currentUser.uid)return;
-        _db.collection('users').doc(ud.id).collection('following').doc(_currentUser.uid).get().then(fd=>{
-          if(fd.exists)sendNotification(ud.id,'info',authorName+' posted a new review: '+work,newDoc.id);
-        }).catch(()=>{});
-      });
-    }).catch(()=>{});
     toast('Review published! ✓');
-    document.getElementById('r-artist').value='';document.getElementById('r-work').value='';document.getElementById('r-type').value='';document.getElementById('r-release-date').value='';
+    document.getElementById('r-artist').value='';document.getElementById('r-work').value='';document.getElementById('r-type').value='';document.getElementById('r-genre').value='';
     var rc=document.querySelector('input[name="rating"]:checked');if(rc)rc.checked=false;
     document.getElementById('editor').innerHTML='';document.getElementById('covImg').style.display='none';document.getElementById('covPH').style.display='flex';_pendingB64=null;document.getElementById('star-lbl').textContent='Click to rate';
     navTo('review/'+newDoc.id);
@@ -1679,8 +1624,8 @@ function renderNewsMain(doc){
   var p=doc.data(),id=doc.id;
   var ds=p.createdAt?new Date(p.createdAt.toMillis()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
   var staffBtns=(_currentUser&&isStaff(_currentUser.uid,_userData))
-    ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-edit" onclick="openEditNewsPost('${id}',this)"><i class="material-icons" style="font-size:14px">edit</i>Edit</button><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
-  mainCol.innerHTML=`<div class="news-featured-post" id="news-post-${id}">
+    ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
+  mainCol.innerHTML=`<div class="news-featured-post">
     <div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div>
     <div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
 }
@@ -1691,10 +1636,10 @@ function showNewsPost(id){
     var p=doc.data();
     var ds=p.createdAt?new Date(p.createdAt.toMillis()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
     var staffBtns=(_currentUser&&isStaff(_currentUser.uid,_userData))
-      ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-edit" onclick="openEditNewsPost('${id}',this)"><i class="material-icons" style="font-size:14px">edit</i>Edit</button><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
+      ?`<div style="padding:0 24px 16px;display:flex;gap:8px"><button class="staff-btn sb-del" onclick="deleteNewsPost('${id}')"><i class="material-icons" style="font-size:14px">delete</i>Delete</button></div>`:'';
     var mainCol=document.getElementById('news-main-col');
     mainCol.innerHTML=`<div style="margin-bottom:12px"><button onclick="loadNews()" style="background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:0"><i class="material-icons" style="font-size:16px">arrow_back</i>Back to News</button></div>
-      <div class="news-featured-post" id="news-post-${id}"><div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div><div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
+      <div class="news-featured-post"><div class="nfp-header"><div class="nfp-title">${p.title||'Untitled'}</div><div class="nfp-meta"><span>${p.authorName||'Staff'}</span><span>&middot;</span><span>${ds}</span></div></div><div class="nfp-body">${p.body||''}</div>${staffBtns}</div>`;
   });
 }
 
@@ -1710,34 +1655,6 @@ function publishNews(){
 function deleteNewsPost(id){
   if(!confirm('Delete this post?'))return;
   _db.collection('news').doc(id).delete().then(()=>{toast('Post deleted.');loadNews();}).catch(e=>toast('Error: '+e.message));
-}
-function openEditNewsPost(id,btn){
-  _db.collection('news').doc(id).get().then(doc=>{
-    if(!doc.exists)return;
-    var p=doc.data();
-    var mainCol=document.getElementById('news-main-col');
-    var backBtn=document.getElementById('news-back-btn')?'':'';//may exist
-    mainCol.innerHTML=`
-      <div style="margin-bottom:12px"><button onclick="showNewsPost('${id}')" style="background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:0"><i class="material-icons" style="font-size:16px">arrow_back</i>Cancel Edit</button></div>
-      <div class="rcard" style="border-radius:2px">
-        <div class="rsec"><p class="slbl">Post Title</p><div class="fld"><input type="text" id="edit-news-title" value="${(p.title||'').replace(/"/g,'&quot;')}"></div></div>
-        <div class="rsec"><p class="slbl">Content</p>
-          <div class="tbar">
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('bold',false,null)"><b>B</b></button>
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('italic',false,null)"><i>I</i></button>
-            <button class="tb" onclick="document.getElementById('edit-news-editor').focus();document.execCommand('underline',false,null)"><u>U</u></button>
-          </div>
-          <div class="editor" id="edit-news-editor" contenteditable="true" style="min-height:200px">${p.body||''}</div>
-        </div>
-        <div class="subbar"><button class="bdis" onclick="showNewsPost('${id}')">Cancel</button><button class="bpub" onclick="saveNewsEdit('${id}')"><i class="material-icons">save</i>Save Changes</button></div>
-      </div>`;
-  });
-}
-function saveNewsEdit(id){
-  var title=document.getElementById('edit-news-title').value.trim();
-  var body=document.getElementById('edit-news-editor').innerHTML.trim();
-  if(!title){toast('Add a title.');return;}if(!body){toast('Write some content.');return;}
-  _db.collection('news').doc(id).update({title,body}).then(()=>{toast('Post updated! ✓');showNewsPost(id);}).catch(e=>toast('Error: '+e.message));
 }
 
 // ── Admin Panel ───────────────────────────────────────────────────────────────
@@ -1836,20 +1753,253 @@ function doAddBadge(){
   });
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Follow / Unfollow ────────────────────────────────────────────────────────
+function toggleFollow(){
+  if(!_currentUser){navTo('login');return;}
+  var uid=profileViewId;if(!uid||uid===_currentUser.uid)return;
+  var btn=document.getElementById('p-follow-btn');
+  var followId=_currentUser.uid+'_'+uid;
+  if(btn.textContent.trim()==='Follow'){
+    // Follow
+    _db.collection('users').doc(uid).get().then(doc=>{
+      if(!doc.exists)return;
+      _db.collection('follows').doc(followId).set({followerId:_currentUser.uid,followingId:uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
+        btn.textContent='Following';btn.style.background='#fff';btn.style.color='var(--p)';btn.style.border='1px solid var(--p)';
+        var fc=document.getElementById('p-stat-followers');if(fc)fc.textContent=parseInt(fc.textContent||0)+1;
+        var name=(_userData&&_userData.displayName)||_currentUser.email;
+        sendNotification(uid,'info',name+' started following you.',null,null);
+        toast('Following!');
+      });
+    });
+  } else {
+    // Confirm unfollow
+    var uname=document.getElementById('p-name').textContent;
+    document.getElementById('dlg-unfollow-title').textContent='Unfollow @'+uname+'?';
+    document.getElementById('dlg-unfollow-confirm').onclick=function(){
+      _db.collection('follows').doc(followId).delete().then(()=>{
+        btn.textContent='Follow';btn.style.background='var(--p)';btn.style.color='#fff';btn.style.border='none';
+        var fc=document.getElementById('p-stat-followers');if(fc)fc.textContent=Math.max(0,parseInt(fc.textContent||0)-1);
+        closeDlg('dlg-unfollow');toast('Unfollowed.');
+      });
+    };
+    openDlg('dlg-unfollow');
+  }
+}
+
+function openDMFromProfile(){
+  if(!_currentUser){navTo('login');return;}
+  var uid=profileViewId;if(!uid||uid===_currentUser.uid)return;
+  navTo('messages/'+uid);
+}
+
+// ── Messaging ────────────────────────────────────────────────────────────────
+var _activeDMUserId=null;
+var _msgAttachData=null;
+
+function getConvId(uid1,uid2){return uid1<uid2?uid1+'_'+uid2:uid2+'_'+uid1;}
+
+function loadMessages(targetUid){
+  if(!_currentUser){navTo('login');return;}
+  var sidebar=document.getElementById('msg-convs-list');
+  sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md)">Loading...</div>';
+  // Load conversations
+  _db.collection('conversations').where('participants','array-contains',_currentUser.uid).orderBy('lastAt','desc').get().then(snap=>{
+    if(snap.empty){
+      sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md);font-size:14px">No messages yet.<br>Hit + to start a conversation.</div>';
+    } else {
+      renderConvList(snap.docs);
+    }
+    // If target UID provided (from profile DM), open that chat
+    if(targetUid){openChat(targetUid);}
+    else if(!snap.empty){
+      // open most recent
+      var first=snap.docs[0].data();
+      var otherId=first.participants.find(p=>p!==_currentUser.uid);
+      if(otherId)openChat(otherId);
+    } else {
+      document.getElementById('msg-chat-header').innerHTML='<span style="color:var(--md);font-size:14px">Select or start a conversation</span>';
+      document.getElementById('msg-chat-messages').innerHTML='<div style="padding:40px;text-align:center;color:var(--md);font-size:14px">No messages yet.</div>';
+    }
+  }).catch(()=>{sidebar.innerHTML='<div style="padding:24px;color:var(--md)">Could not load.</div>';});
+}
+
+function renderConvList(docs){
+  var sidebar=document.getElementById('msg-convs-list');
+  if(!docs.length){sidebar.innerHTML='<div style="padding:24px;text-align:center;color:var(--md);font-size:14px">No messages yet.</div>';return;}
+  var promises=docs.map(doc=>{
+    var d=doc.data();
+    var otherId=d.participants.find(p=>p!==_currentUser.uid);
+    return _db.collection('users').doc(otherId).get().then(uDoc=>{
+      return {conv:doc,user:uDoc.exists?uDoc.data():{},otherId};
+    });
+  });
+  Promise.all(promises).then(items=>{
+    sidebar.innerHTML=items.map(item=>{
+      var d=item.conv.data();
+      var unread=d.unread&&d.unread[_currentUser.uid]>0;
+      var photo=item.user.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
+      var name=item.user.displayName||'Unknown';
+      var last=d.lastText?esc2(d.lastText.slice(0,40)+(d.lastText.length>40?'…':'')):'';
+      return `<div class="msg-conv-item${item.otherId===_activeDMUserId?' active':''}" onclick="openChat('${item.otherId}')">
+        <img src="${photo}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0">
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:${unread?700:500};color:var(--dk)">${esc2(name)}</div><div style="font-size:12px;color:var(--md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last}</div></div>
+        ${unread?'<div class="msg-unread-dot"></div>':''}
+      </div>`;
+    }).join('');
+  });
+}
+
+function openChat(otherUid){
+  _activeDMUserId=otherUid;
+  var header=document.getElementById('msg-chat-header');
+  var messages=document.getElementById('msg-chat-messages');
+  var inputArea=document.getElementById('msg-chat-input-area');
+  header.innerHTML='<div style="width:38px;height:38px;border-radius:50%;background:#e0e0e0;overflow:hidden;flex-shrink:0"><img id="dm-other-photo" src="" style="width:100%;height:100%;object-fit:cover"></div><span id="dm-other-name" style="font-weight:700;font-size:15px;color:var(--dk);cursor:pointer">Loading...</span>';
+  messages.innerHTML='<div style="padding:40px;text-align:center;color:var(--md)">Loading...</div>';
+  inputArea.style.display='block';
+  _db.collection('users').doc(otherUid).get().then(uDoc=>{
+    var uData=uDoc.exists?uDoc.data():{};
+    var photo=uData.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
+    var name=uData.displayName||'Unknown';
+    document.getElementById('dm-other-photo').src=photo;
+    document.getElementById('dm-other-name').textContent=name;
+    document.getElementById('dm-other-name').onclick=()=>navTo('profile/'+otherUid);
+    // Load messages
+    var convId=getConvId(_currentUser.uid,otherUid);
+    _db.collection('conversations').doc(convId).collection('messages').orderBy('createdAt','asc').get().then(snap=>{
+      if(snap.empty){messages.innerHTML='<div style="text-align:center;padding:40px;color:var(--md);font-size:14px">Send the first message!</div>';return;}
+      messages.innerHTML=snap.docs.map(doc=>renderMsgBubble(doc.data())).join('');
+      messages.scrollTop=messages.scrollHeight;
+      // Mark read
+      _db.collection('conversations').doc(convId).update({['unread.'+_currentUser.uid]:0}).catch(()=>{});
+    }).catch(()=>{messages.innerHTML='<div style="padding:20px;color:var(--md)">Could not load messages.</div>';});
+    // Highlight active conv
+    document.querySelectorAll('.msg-conv-item').forEach(el=>{el.classList.remove('active');if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes(otherUid))el.classList.add('active');});
+  });
+}
+
+function renderMsgBubble(m){
+  var isMe=m.senderId===_currentUser.uid;
+  var cls=isMe?'mine':'theirs';
+  var time=m.createdAt?new Date(m.createdAt.toMillis()).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';
+  var content='';
+  if(m.type==='image'){
+    content=`<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'}"><img class="msg-img-bubble" src="${m.content}" onclick="window.open('${m.content}','_blank')"><div style="font-size:11px;color:var(--md);margin-top:2px">${time}</div></div>`;
+    return content;
+  } else if(m.type==='file'){
+    var fileHtml=`<div class="msg-bubble ${cls}"><div class="msg-file-attach ${cls}" onclick="downloadMsgFile('${m.fileData||''}','${esc2(m.fileName||'file')}')"><i class="material-icons" style="font-size:18px">insert_drive_file</i><div><div style="font-weight:600;font-size:13px">${esc2(m.fileName||'file')}</div><div style="font-size:11px;opacity:.7">${m.fileSize||''} · Click to download</div></div></div></div>`;
+    content=fileHtml;
+  } else {
+    // Process links — make URLs blue/clickable
+    var text=esc2(m.content||'');
+    text=text.replace(/(https?:\/\/[^\s<>"]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+    content=`<div class="msg-bubble ${cls}">${text}</div>`;
+  }
+  return `<div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};gap:2px">${content}<div style="font-size:11px;color:var(--md);padding:0 4px">${time}</div></div>`;
+}
+
+function sendMessage(){
+  if(!_currentUser||!_activeDMUserId)return;
+  var input=document.getElementById('msg-input');
+  var text=input.value.trim();
+  if(!text&&!_msgAttachData)return;
+  var convId=getConvId(_currentUser.uid,_activeDMUserId);
+  var msgData={senderId:_currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  var lastText='';
+  if(_msgAttachData){
+    msgData.type=_msgAttachData.type;
+    if(_msgAttachData.type==='image'){msgData.content=_msgAttachData.data;lastText='📷 Image';}
+    else{msgData.type='file';msgData.fileData=_msgAttachData.data;msgData.fileName=_msgAttachData.name;msgData.fileSize=_msgAttachData.size;lastText='📎 '+_msgAttachData.name;}
+    clearMsgAttach();
+  } else {
+    msgData.type='text';msgData.content=text;lastText=text;
+    input.value='';input.style.height='auto';
+  }
+  var convRef=_db.collection('conversations').doc(convId);
+  var msgRef=convRef.collection('messages').doc();
+  var batch=_db.batch();
+  batch.set(msgRef,msgData);
+  batch.set(convRef,{participants:[_currentUser.uid,_activeDMUserId],lastText:lastText.slice(0,100),lastAt:firebase.firestore.FieldValue.serverTimestamp(),['unread.'+_activeDMUserId]:firebase.firestore.FieldValue.increment(1)},{merge:true});
+  batch.commit().then(()=>{
+    var msgs=document.getElementById('msg-chat-messages');
+    // Optimistic render
+    var tmpDiv=document.createElement('div');
+    tmpDiv.innerHTML=renderMsgBubble(Object.assign({},msgData,{createdAt:{toMillis:()=>Date.now()}}));
+    msgs.appendChild(tmpDiv.firstChild);
+    msgs.scrollTop=msgs.scrollHeight;
+    // Send notification
+    var myName=(_userData&&_userData.displayName)||_currentUser.email;
+    sendNotification(_activeDMUserId,'info','📬 '+myName+' sent you a message.',null,null);
+  });
+}
+
+function handleMsgFileAttach(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=ev=>{
+    var data=ev.target.result;
+    var sizeFmt=file.size>1048576?(file.size/1048576).toFixed(1)+' MB':(file.size/1024).toFixed(0)+' KB';
+    _msgAttachData={data,name:file.name,size:sizeFmt,type:file.type.startsWith('image/')?'image':'file'};
+    var prev=document.getElementById('msg-attach-preview');
+    document.getElementById('msg-attach-name').textContent=file.name+' · '+sizeFmt;
+    prev.style.display='flex';
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+function clearMsgAttach(){
+  _msgAttachData=null;
+  document.getElementById('msg-attach-preview').style.display='none';
+}
+
+function downloadMsgFile(data,name){
+  if(!data)return;
+  var a=document.createElement('a');a.href=data;a.download=name;a.click();
+}
+
+function openNewDMSearch(){
+  document.getElementById('new-dm-overlay').style.display='flex';
+  document.getElementById('new-dm-search').value='';
+  document.getElementById('new-dm-results').innerHTML='';
+  setTimeout(()=>document.getElementById('new-dm-search').focus(),50);
+}
+
+function closeNewDMSearch(){
+  document.getElementById('new-dm-overlay').style.display='none';
+}
+
+function searchDMUsers(q){
+  var res=document.getElementById('new-dm-results');
+  if(!q.trim()){res.innerHTML='';return;}
+  _db.collection('users').get().then(snap=>{
+    var users=snap.docs.filter(doc=>doc.id!==_currentUser.uid&&(doc.data().displayName||'').toLowerCase().includes(q.toLowerCase()));
+    if(!users.length){res.innerHTML='<div style="padding:16px;text-align:center;color:var(--md);font-size:14px">No users found.</div>';return;}
+    res.innerHTML=users.slice(0,8).map(doc=>{
+      var d=doc.data();
+      var photo=d.photo||'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png';
+      return `<div onclick="closeNewDMSearch();openChat('${doc.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 8px;cursor:pointer;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+        <img src="${photo}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0">
+        <div style="font-size:14px;font-weight:500;color:var(--dk)">${esc2(d.displayName||'Unknown')}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+// Close new DM overlay on background click
+document.getElementById('new-dm-overlay').addEventListener('click',function(e){if(e.target===this)closeNewDMSearch();});
+
+
 function doLogin(){
   var email=document.getElementById('login-email').value.trim(),pw=document.getElementById('login-pw').value;
   var err=document.getElementById('login-err');err.style.display='none';
   if(!email||!pw){err.textContent='Please enter your email and password.';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(e=>{err.textContent='Invalid email or password.';err.style.display='block';});
 }
-var _validUsernameRe=/^[a-zA-Z0-9\-_.]+$/;
-function validateUsername(name){return _validUsernameRe.test(name);}
 function doSignup(){
   var name=document.getElementById('signup-name').value.trim(),email=document.getElementById('signup-email').value.trim(),pw=document.getElementById('signup-pw').value;
   var err=document.getElementById('signup-err');err.style.display='none';
   if(!name||!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
-  if(!validateUsername(name)){err.textContent='Username can only contain letters, numbers, hyphens (-), underscores (_), and dots (.). No spaces.';err.style.display='block';return;}
   if(pw.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
   // Check for duplicate username (case-insensitive)
   var btn=document.querySelector('#signup-view .btn-submit');
